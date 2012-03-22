@@ -1,0 +1,3 @@
+flavor = vanilla
+size = large
+item = cone

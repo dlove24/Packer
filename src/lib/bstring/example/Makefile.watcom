@@ -1,0 +1,131 @@
+#if 0
+
+#########################################
+#                                       #
+#   Bstrlib examples for win32          #
+#                                       #
+#   Makefile.watcom                     #
+#                                       #
+#   Make sure that WATCOM environment   #
+#   variable is set, change the CDIR    #
+#   and BSTRDIR variables below as      #
+#   necessary and issue the command:    #
+#                                       #
+#       wmake /f Makefile.watcom        #
+#                                       #
+#########################################
+
+CDIR = .
+BSTRDIR = $(CDIR)\..
+
+IDIR = $(CDIR)
+ODIR = $(CDIR)\obj
+ADIR = $(CDIR)\arc
+STLDIR = F:\dev\src\stl\STLport-4.5.3\stlport
+
+DEVNULL = nul
+CC = *wcc386
+CPP = *wpp386
+LINK = wlink
+TAR = pkzip -u
+
+SYSLFLAGS = SYS nt
+SYSCFLAGS = -bt=nt
+
+CFLAGS = -e25 -zq -oairten -s -mf -6r -j $(SYSCFLAGS) -bm -wx -we
+CPPFLAGS = $(CFLAGS) -xs
+
+INCLUDES = -i=$(BSTRDIR)
+# DEFINES = -DBSTRLIB_CAN_USE_STL
+DEFINES = -DMAIN_TEST_FOR_CSV
+
+COMOBJS = $(ODIR)\bstrlib.obj  &
+          $(ODIR)\bstraux.obj  &
+          $(ODIR)\bstrwrap.obj
+
+LIBS = plbx3r.lib
+
+# Makefile verbose setting
+
+QUIET = @
+# QUIET =
+
+.c: $(CDIR);$(BSTRDIR)
+.cpp: $(CDIR);$(BSTRDIR)
+.obj: $(ODIR)
+
+# The default build rule for c -> obj compilation.
+
+.c.obj: .AUTODEPEND
+	$(QUIET)echo     Compiling: $[*
+	$(QUIET)$(CC) $[* $(INCLUDES) $(CFLAGS) $(DEFINES) -fo=$(ODIR)\
+
+.cpp.obj: .AUTODEPEND
+	$(QUIET)echo     Compiling: $[*
+	$(QUIET)$(CPP) $[* $(INCLUDES) $(CPPFLAGS) $(DEFINES) -fo=$(ODIR)\
+
+# The default build rule for obj -> exe linking.
+
+.obj.exe : $(COMOBJS) Makefile.watcom
+	$(QUIET)%write $(ODIR)\$^&.lnk NAME $^@
+	$(QUIET)for %%f in ($(ODIR)\$^&.obj $(COMOBJS)) do $(QUIET)%append $(ODIR)\$^&.lnk FIL %%f
+	$(QUIET)for %%f in ($(LIBS)) do $(QUIET)%append $(ODIR)\$^&.lnk library %%f
+	$(QUIET)%append $(ODIR)\$^&.lnk op symf=$(ODIR)\$^&.sym
+	$(QUIET)%append $(ODIR)\$^&.lnk op map=$(ODIR)\$^&.map
+	$(QUIET)%append $(ODIR)\$^&.lnk debug all
+	$(QUIET)echo     Linking: $^@
+	$(QUIET)*$(LINK) $(SYSLFLAGS) d all op maxe=25 op q @$(ODIR)\$^&.lnk
+	$(QUIET)echo     Target $^@ done.
+	$(QUIET)echo.
+
+# The first rule is the default build rule, from which all other rules may be
+# activated
+
+ALLAPPS = 1.exe 2.exe 3.exe 4.exe 5.exe rot13.exe cbench.exe cppbench.exe num2word.exe strcat.exe reverse.exe taint.exe strings.exe csvparse.exe
+
+all: $(ALLAPPS)
+
+# Link dependencies
+
+1.exe        : $(ODIR)\1.obj        $(COMOBJS) Makefile.watcom
+2.exe        : $(ODIR)\2.obj        $(COMOBJS) Makefile.watcom
+3.exe        : $(ODIR)\3.obj        $(COMOBJS) Makefile.watcom
+4.exe        : $(ODIR)\4.obj        $(COMOBJS) Makefile.watcom
+5.exe        : $(ODIR)\5.obj        $(COMOBJS) Makefile.watcom
+rot13.exe    : $(ODIR)\rot13.obj    $(COMOBJS) Makefile.watcom
+cbench.exe   : $(ODIR)\cbench.obj   $(COMOBJS) Makefile.watcom
+cppbench.exe : $(ODIR)\cppbench.obj $(COMOBJS) Makefile.watcom
+num2word.exe : $(ODIR)\num2word.obj $(COMOBJS) Makefile.watcom
+reverse.exe  : $(ODIR)\reverse.obj  $(COMOBJS) Makefile.watcom
+strcat.exe   : $(ODIR)\strcat.obj   $(COMOBJS) Makefile.watcom
+taint.exe    : $(ODIR)\taint.obj    $(COMOBJS) Makefile.watcom
+strings.exe  : $(ODIR)\strings.obj  $(COMOBJS) Makefile.watcom
+csvparse.exe : $(ODIR)\csvparse.obj $(COMOBJS) Makefile.watcom
+
+# Non-default build rules.
+
+# Initial commands invoked on every make
+
+.BEFORE
+	$(QUIET)echo     Bstrlib Examples
+	$(QUIET)echo     ================
+	$(QUIET)echo xxx > $(ODIR)\xxx
+	$(QUIET)if not exist $(ODIR)\xxx mkdir $(ODIR)
+	$(QUIET)if exist $(ODIR)\xxx del $(ODIR)\xxx > $(DEVNULL)
+	$(QUIET)set PATH=%path%;$(%watcom)\bin;$(%watcom)\binb;$(%watcom)\binw
+	$(QUIET)set INCLUDE=.;$(STLDIR);$(%watcom)\h;$(%watcom)\h\nt
+
+# User defined commands
+
+clean: .SYMBOLIC
+	$(QUIET)echo     Removing build targets
+	$(QUIET)for %%f in ($(ODIR)\*.obj $(ODIR)\*.map $(ODIR)\*.sym $(ODIR)\*.lnk) do @if exist %%f del %%f > nul
+	$(QUIET)for %%f in ($(ALLAPPS)) do @if exist %%f del %%f > nul
+
+archive: .SYMBOLIC
+	@echo xxx > $(ADIR)\xxx
+	@if not exist $(ADIR)\xxx mkdir $(ADIR)
+	@if exist $(ADIR)\xxx @del $(ADIR)\xxx
+	@$(TAR) $(ADIR)\$(APP).zip *.c *.h makefi*.*
+
+#endif

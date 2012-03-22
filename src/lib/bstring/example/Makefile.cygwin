@@ -1,0 +1,74 @@
+#if 0
+
+#########################################
+#                                       #
+#   Bstrlib examples for win32          #
+#                                       #
+#   Makefile.cygwin                     #
+#                                       #
+#   Make sure that CYGWIN is properly   #
+#   installed, set the CDIR, BSTRDIR    #
+#   and CYGWINDIR variable below and    #
+#   issue the command:                  #
+#                                       #
+#       make -f Makefile.cygwin         #
+#                                       #
+#########################################
+
+CDIR = .
+BSTRDIR = $(CDIR)/..
+
+ODIR = $(CDIR)/obj
+
+CYGWINDIR = h:/CYGWIN/BIN
+CC = $(CYGWINDIR)/gcc
+CPP = $(CYGWINDIR)/g++
+RM = rm -f
+STRIP = $(CYGWINDIR)/strip.exe
+
+DEFINES = -DMAIN_TEST_FOR_CSV
+COMFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES) -Wcast-align -Wpointer-arith -Winline -Wundef -Wshadow -Wconversion -Wno-conversion -ffloat-store
+# -Wcast-qual -Wwrite-strings
+CFLAGS = $(COMFLAGS) -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Wnested-externs
+CPPFLAGS = $(COMFLAGS)
+
+INCLUDES = -I$(BSTRDIR)
+
+COMOBJS = $(ODIR)/bstrlib.o $(ODIR)/bstraux.o $(ODIR)/bstrwrap.o
+
+# Makefile verbose setting
+
+QUIET = @
+# QUIET =
+
+ALLAPPS = 1.exe 2.exe 3.exe 4.exe 5.exe rot13.exe cbench.exe cppbench.exe num2word.exe strcat.exe reverse.exe taint.exe strings.exe csvparse.exe
+
+all: $(ALLAPPS)
+
+%.exe: $(ODIR)/%.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+$(ODIR)/%.o : %.c
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : $(BSTRDIR)/%.c
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : %.cpp
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CPP) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : $(BSTRDIR)/%.cpp
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CPP) $(CPPFLAGS) $(INCLUDES) -c $< -o $@
+
+clean:
+	$(QUIET)echo Cleaning
+	-$(QUIET)$(RM) $(ODIR)/*.o $(ALLAPPS)
+
+.PHONY: all clean
+
+#endif

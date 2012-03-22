@@ -1,0 +1,148 @@
+#if 0
+
+#########################################
+#                                       #
+#   Bstrlib examples for win32          #
+#                                       #
+#   Makefile.msvc                       #
+#                                       #
+#   Make sure that vcvars32.bat has     #
+#   been called change the CDIR and     #
+#   BSTRDIR variables below as          #
+#   necessary and issue the command:    #
+#                                       #
+#       nmake /f Makefile.msvc          #
+#                                       #
+#########################################
+
+CDIR= .
+BSTRDIR=$(CDIR)\..
+
+ODIR=.\obj
+
+!IF "$(OS)" == "Windows_NT"
+DEVNULL=
+!ELSE
+DEVNULL=nul
+!ENDIF
+CC=cl.exe
+CPP=cl.exe
+LINK32=link.exe
+
+DEFS=/D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "MAIN_TEST_FOR_CSV"
+COMMON_FLAGS=/nologo /ML /GX /O2 /Fo"$(ODIR)\\" /Fd"$(ODIR)\\" /FD /c 
+CFLAGS=/W4 $(COMMON_FLAGS)
+CPP_PROJ=/Ob2 /W3 $(COMMON_FLAGS)
+
+INCLUDES=/I$(BSTRDIR)
+LFLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib odbc32.lib uuid.lib odbccp32.lib /nologo /subsystem:console /incremental:no /machine:I386
+
+COMOBJS = "$(ODIR)\bstrlib.obj"  \
+          "$(ODIR)\bstraux.obj"  \
+          "$(ODIR)\bstrwrap.obj"
+
+# Makefile verbose setting
+
+QUIET = @
+# QUIET =
+
+ALLAPPS = 1.exe 2.exe 3.exe 4.exe 5.exe rot13.exe cbench.exe cppbench.exe num2word.exe strcat.exe reverse.exe taint.exe strings.exe csvparse.exe
+
+ALL : $(ALLAPPS)
+
+CLEAN :
+  -$(QUIET)erase "$(ODIR)\*.obj"
+  -$(QUIET)erase "$(ODIR)\*.idb"
+  for %%f in ($(ALLAPPS)) do if exist "%%f" erase "%%f" > nul
+
+"$(ODIR)" :
+    $(QUIET)if not exist "$(ODIR)/$(DEVNULL)" mkdir "$(ODIR)"
+
+1.exe : $(ODIR)\1.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+2.exe : $(ODIR)\2.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+3.exe : $(ODIR)\3.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+4.exe : $(ODIR)\4.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+5.exe : $(ODIR)\5.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+rot13.exe : $(ODIR)\rot13.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+cbench.exe : $(ODIR)\cbench.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+cppbench.exe : $(ODIR)\cppbench.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+num2word.exe : $(ODIR)\num2word.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+strcat.exe : $(ODIR)\strcat.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+reverse.exe : $(ODIR)\reverse.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+taint.exe : $(ODIR)\taint.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+strings.exe : $(ODIR)\strings.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+csvparse.exe : $(ODIR)\csvparse.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+# Compile rule
+
+.c{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+{$(BSTRDIR)}.c{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CPP) $(INCLUDES) $(DEFS) $(CPP_PROJ) $< 
+
+{$(BSTRDIR)}.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CPP) $(INCLUDES) $(DEFS) $(CPP_PROJ) $< 
+
+# De

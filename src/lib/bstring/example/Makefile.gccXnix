@@ -1,0 +1,120 @@
+#if 0
+
+#########################################
+#                                       #
+#   Bstrlib examples for gcc on *nix    #
+#                                       #
+#   Makefile.gccXnix                    #
+#                                       #
+#   Set the CDIR, BSTRDIR below, make   #
+#   sure ODIR exists and issue the      #
+#   command:                            #
+#                                       #
+#       make -f Makefile.gccXnix        #
+#                                       #
+#########################################
+
+CDIR = .
+BSTRDIR = $(CDIR)/..
+
+ODIR = $(CDIR)/obj
+
+CC = gcc
+CPP = g++
+RM = rm -f
+STRIP = strip
+
+DEFINES = -DMAIN_TEST_FOR_CSV
+CFLAGS = -O3 -Wall -pedantic -ansi -s $(DEFINES)
+INCLUDES = -I$(BSTRDIR)
+
+COMOBJS = $(ODIR)/bstrlib.o $(ODIR)/bstraux.o $(ODIR)/bstrwrap.o
+
+# Makefile verbose setting
+
+QUIET = @
+# QUIET =
+
+ALLAPPS = 1 2 3 4 5 rot13 cbench cppbench num2word strcat reverse taint strings csvparse
+
+all: $(ALLAPPS)
+
+1: $(ODIR)/1.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+2: $(ODIR)/2.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+3: $(ODIR)/3.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+4: $(ODIR)/4.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+5: $(ODIR)/5.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+rot13: $(ODIR)/rot13.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+cbench: $(ODIR)/cbench.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+cppbench: $(ODIR)/cppbench.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+num2word: $(ODIR)/num2word.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+strcat: $(ODIR)/strcat.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+reverse: $(ODIR)/reverse.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+taint: $(ODIR)/taint.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+strings: $(ODIR)/strings.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+csvparse: $(ODIR)/csvparse.o $(COMOBJS)
+	$(QUIET)echo Linking: $@
+	$(QUIET)$(CPP) $< $(COMOBJS) -o $@
+
+$(ODIR)/%.o : %.c
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : %.cpp
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : $(BSTRDIR)/%.c
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+$(ODIR)/%.o : $(BSTRDIR)/%.cpp
+	$(QUIET)echo Compiling: $<
+	$(QUIET)$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+clean:
+	$(QUIET)echo Cleaning
+	-$(QUIET)$(RM) $(ODIR)/*.o $(ALLAPPS)
+
+.PHONY: all clean
+
+#endif

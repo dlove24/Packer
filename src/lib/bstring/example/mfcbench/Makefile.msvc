@@ -1,0 +1,84 @@
+#if 0
+
+#########################################
+#                                       #
+#   Bstrlib examples for win32          #
+#                                       #
+#   Makefile.msvc                       #
+#                                       #
+#   Make sure that vcvars32.bat has     #
+#   been called change the CDIR and     #
+#   BSTRDIR variables below as          #
+#   necessary and issue the command:    #
+#                                       #
+#       nmake /f Makefile.msvc          #
+#                                       #
+#########################################
+
+CDIR= .
+BSTRDIR=$(CDIR)\..\..
+
+ODIR=.\obj
+
+!IF "$(OS)" == "Windows_NT"
+DEVNULL=
+!ELSE
+DEVNULL=nul
+!ENDIF
+CC=cl.exe
+CPP=cl.exe
+LINK32=link.exe
+
+DEFS=/D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "_AFXDLL" 
+COMMON_FLAGS=/nologo /MD /GX /O2 /Fo"$(ODIR)\\" /Fd"$(ODIR)\\" /FD /c 
+CFLAGS=/W4 $(COMMON_FLAGS)
+CPP_PROJ=/Ob2 /W3 $(COMMON_FLAGS)
+
+INCLUDES=/I$(BSTRDIR)
+LFLAGS=/nologo /subsystem:console /incremental:no /machine:I386
+
+COMOBJS = "$(ODIR)\bstrwrap.obj" \
+          "$(ODIR)\bstrlib.obj"
+
+# Makefile verbose setting
+
+QUIET = @
+# QUIET =
+
+ALLAPPS = mfcbench.exe
+
+ALL : $(ALLAPPS)
+
+CLEAN :
+  -$(QUIET)erase "$(ODIR)\*.obj"
+  -$(QUIET)erase "$(ODIR)\*.idb"
+  for %%f in ($(ALLAPPS)) do if exist "%%f" erase "%%f" > nul
+
+"$(ODIR)" :
+    $(QUIET)if not exist "$(ODIR)/$(DEVNULL)" mkdir "$(ODIR)"
+
+mfcbench.exe : $(ODIR)\mfcbench.obj $(COMOBJS)
+  $(QUIET)$(LINK32) @<<
+  $(LFLAGS) /out:$@ $(ODIR)\$*.obj $(COMOBJS)
+<<
+
+# Compile rule
+
+.c{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+{$(BSTRDIR)}.c{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $< 
+
+.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CPP) $(INCLUDES) $(DEFS) $(CPP_PROJ) $< 
+
+{$(BSTRDIR)}.cpp{$(ODIR)}.obj::
+   $(QUIET)$(CPP) $(INCLUDES) $(DEFS) $(CPP_PROJ) $< 
+
+# Dependencies
+
+#endif
