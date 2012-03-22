@@ -1,0 +1,3 @@
+[submodule "src/lib/bstring"]
+	path = src/lib/bstring
+	url = git@github.com:dlove24/dl-bstring.git
