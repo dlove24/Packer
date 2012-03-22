@@ -1,2 +1,0 @@
-John; 23; a
-Mary; 16; i
