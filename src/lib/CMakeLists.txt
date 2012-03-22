@@ -29,5 +29,8 @@ add_subdirectory( helper )
 ## Add Core Libraries
 ##
 
+# C Algorithms library                                                              
+add_subdirectory( calg )                                                
+
 # BString library                                                              
 add_subdirectory( bstring )                                                
