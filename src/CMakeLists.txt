@@ -204,10 +204,10 @@ add_subdirectory( bin )
 ##
 
 # Enable CTest
-#enable_testing()
+enable_testing()
 
 # Build the test harnesses/frameworks/applications, but remove them from the 
-# install list
-#add_subdirectory(test 
-#	EXCLUDE_FROM_ALL
-#	)
+#install list
+add_subdirectory( lib/calg/test 
+	EXCLUDE_FROM_ALL
+)
