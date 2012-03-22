@@ -1,0 +1,383 @@
+[h1 Lab 2: Introduction to Static Routing]
+
+[h2 Aim]
+
+[quote]
+To implement a two router configuration, connecting a small branch
+network to another the network, via a common shared network.
+[end]
+
+For the purpose of this lab, you only need to set-up the [ac TCPIP] network
+stack: we will do most of our network testing using [tt ping] to start
+with. Once you have the [ac TCPIP] network working, try enabling other
+services and see what happens.
+
+[h2 Objectives]
+
+[ol]
+
+  [item You will be able to use [tt ifconfig] to set-up basic [ac TCPIP]
+parameters on a Unix system]
+
+  [item You will be able to identify how a router may be used to
+join physically unrelated networks.]
+
+  [item You will be able to configure [ac TCPIP] in a routed
+environment, and identify the differences between a Routed and a
+Switched network]
+
+  [item You will be able to identify the need for an automatically
+configured network routers]
+
+[end]
+
+[h2 Pre-Requisites]
+
+[ul]
+
+[item You will need a copy of the [tt OpenBSD Console] client, available from
+[link this site|ftp://10.72.46.182/Images]. These notes assume you will be
+using image version [tt 07]. Ask the tutor for details if you are unsure.]
+
+[item You should be familiar with running an operating system image under
+VMWare in the labs. If you haven't set-up a client image before, have a look
+on the module lab page for a tutorial on VMWare which will take you through
+the steps.]
+
+[item You should be aware of how to set-up a basic Ethernet network. We will
+not be using anything fancy, but should should be comfortable with the patch
+panel and basic switch set-up.]
+
+[item Finally it would be a good ideal to have some familiarity with the
+basics of [ac IP] addressing and sub-netting theory. Again we won't be doing
+anything very complicated in this lab, but you will some some knowledge to
+answer the questions at the end...]
+
+[end]
+
+[h2 Equipment]
+
+[ul]
+    [item  1 $\times$ switch on the rack system]
+    [item  2 $\times$ computers capable of running VMWare 6.0]
+    [item  2 $\times$ UTP Cat5 patch cables]
+[end]
+
+[h2 Recommended Reading]
+
+Most of the background documentation is available on the module site, under
+the notes for [e Block 2] of the module.
+
+If you have not used a Unix system before, have a look at the [e Brief Guide
+to Unix] available on the module Wiki. You will also find links to the Unix
+manual ([tt man]) pages of the commands used in this lab.
+
+[h2 Scenario]
+
+[figure:LabNet]
+  [image IP_Routing_Lab_Base_Network]
+  [caption Myertor Project Office Network Topology]
+[end]
+
+Myertor has a large number of satellite project office, usually located within
+a customers site. In common with then network topology at most large
+companies, the intermediate networks connecting the project office to
+headquarters is 'rented' from an [ac ISP] and not used exclusively for this
+link. Our [ac ISP] allocates addresses for our border routers from the [tt
+172.20.0.0/16] block, so the [e external] address of each border router will
+live somewhere in here.
+
+Project offices, by contrast, are set-up using the addresses taken from the
+[tt 192.168.x.0/24] block, using different values for [tt x] in each office.
+This requires the border routers at the project site to be set-up to send
+packets destined for other office (or headquarters) across the 'foreign'
+network [tt 172.20.0.0/16]. A rough picture of this network topology is shown
+in [ref LabNet].
+
+In this lab we will look at the steps required to get basic routing services
+working in this topology. By the end, we should have a network which allows
+people at any project office to connect to any other network. We will start,
+though, with just two networks: once you know how to join these together, you
+can add any other network with a few commands.
+
+[h2 Setting up the Headquarters Border Router]
+
+The first host we will set-up will be the border router for the
+'headquarters' network. You will run a [tt http] server (Apache) on this
+host to give us something to test against. Later we will attach a new
+virtual image to the internal interface of this host, and run Apache on
+this new image to simulate the corporate web server.
+
+Before we start the OpenBSD image, make sure you first virtual Ethernet
+card is set to [e Bridged] mode and you second Ethernet card is set to
+[e Host Only]. This connects your first virtual Ethernet card to the
+network, and allows us to add other images to you network using VMWare. 
+If you get any questions from VMWare over whether to image was moved or
+copied, select the default [e copied] when prompted[fn VMWare
+generates the [sc mac] addresses for the virtual machines when the
+image is first created. Selecting [e copied] forces VMWare to
+regenerate the [sc mac] addresses, allowing you to have multiple
+images attached to the same network. If you select [e move], VMWare
+would use the original [sc mac] address, and everyone would end up
+with the same one. At the very least this will cause confusion, but it
+would normally prevent the networking working at all.].
+
+Start the OpenBSD image, and wait for the [tt login:] prompt to appear.
+Login to the OpenBSD image using the username [tt root] and the password
+[tt gold]. If you are asked for a terminal type, press [tt Enter] to
+select the default ([tt VT220])[fn OpenBSD is often run 'headless',
+i.e. without a keyboard or monitor, using the serial port. So when you login
+as root, OpenBSD doesn't automatically assume you will be using a standard
+terminal, so it asks you which terminal you do want. Most of the time we don't
+really care, and the default emulation of a [tt VT220] will work on most
+output devices.].This will give you a basic command prompt: all further
+commands are entered at this prompt.
+
+Next, set-up the basic network using the [tt ifconfig]
+command[fn All Unix systems use the 'interface configuration'
+command [tt ifconfig] to perform [e temporary] configuration of
+the network interfaces. Some, e.g. Silicon Graphics Irix, use
+[tt ifconfig] to perform permanent alterations as well. Under
+OpenBSD you will have to edit the relevant [tt hostname] file in the
+[tt /etc] directory if you want your configurations to survive a
+reboot of the image. Have a look at the [man:5 hostname.if] manual
+page ('[tt man hostname.if]') for more details.]. You will need
+to set the external (i.e. bridged) Ethernet card [tt vic0] to the address
+of the [ac ISP] network. We will use the address block '[tt 172.20.0.0/16]'
+for the [ac ISP] network: all border routers [e must] connect to the
+network to function. You border router will also have the external
+address [tt 172.20.x.1], where [tt x] is the number of your network patch
+port.
+
+Before we configure the network using the [tt ifconfig] command, type
+
+[command]
+  ifconfig
+[end]
+
+at the command prompt and look at the output. Now type
+
+[command]
+  ifconfig vic0 inet 172.20.x.1
+[end]
+
+substituting [tt x] for your patch number. Type
+
+[command]
+  ifconfig
+[end]
+
+again, and look at the output. What has changed? How has the network
+interface been set-up (e.g. look at the netmask and broadcast address)?
+
+[medskip]
+
+Repeat this procedure for your internal network card, [tt vic1], using
+the network address [tt 192.168.x.1] (where [tt x] is again your patch
+number).
+
+[medskip]
+
+Before we leave this machine, start the Apache web server by typing
+
+[command]
+  httpd
+[end]
+
+at the command prompt. Check the web server is running by typing
+
+[command]
+  lynx 192.168.x.1
+[end]
+
+(where [tt x] is you patch number). This will launch the text-mode
+browser, [tt lynx], and you should see a welcome page. If you do, all is
+well and you can press [tt Ctrl+C] or type [tt q] to quit.
+
+[h2 Setting up the Project Office Border Router]
+
+Now we have a working web server on the headquarters network, use
+[e another physical machine] to set-up an another OpenBSD image as a border
+router. Remember to check the first Ethernet card is in [e Bridged] mode
+and the second is in [e Host Only] mode before you try to configure the
+image. You will need to configure the external address as you did the first,
+and the internal network address should follow a similar pattern as well.
+
+[h2 Checking Connections]
+
+Patch the two border routers into the [s same] switch. First check each
+border router can see the other by using the [tt ping]
+command[fn The [tt ping] command should be available on any
+host with a [ac TCPIP] stack. Essentially it sends an [sc icmp echo]
+packet, and waits for the foreign host to send a [sc icmp echo
+reply] in response. If your host sees the reply, you can usually assume
+the network connection between the two hosts is working. See the
+[tt ping] manual page (also in the Appendix) for more details.]. For
+example, if one border router is [tt 172.20.3.1] try typing
+
+[command]
+  ping 172.20.3.1
+[end]
+
+You should start to see lots of positive replies (and the connection LEDs on
+the switch should also be flashing as well). When you are satisfied the
+connection is working, press [tt Ctrl+C] to cancel the [tt ping]s. If
+you don't get a response [e check your physical connections!]
+
+Now try to [tt ping] the [tt internal] address of each router
+[e from the router itself]. For instance a border router with the address
+[tt 172.20.3.1] should have an internal address of [tt 192.168.3.1].
+Thus the command
+
+[command]
+  ping 192.168.3.1
+[end]
+
+should also work. You should [e not\/] be able to see the internal
+address of the [e other\/] border router[fn Why not?].
+
+[h2 Expanding the Headquarters Network]
+
+You should now have two proto-networks, with two border routers who can
+connect to each other. We will now set-up a web server on the 'headquarters'
+network, demonstrating how ordinary network clients would be set-up in your
+network. This is also a good test that all the previous steps are working as
+expected.
+
+Set-up another OpenBSD image on your Headquarters network, setting [e both]
+virtual Ethernet cards on that image to [e Host Only] mode. This web server
+is now effectively 'trapped' inside the machine: it can only communicate with
+the outside world via your networks border router.
+
+Log into the image as the [tt root] user and set-up the first Ethernet
+card ([tt vic0]) to the address [tt 192.168.x.10], using you port
+number for [tt x]. Start the Apache web browser using the [tt httpd]
+command.
+
+You should now be able to the web browser on this machine from the
+headquarters border router. [s Check this works before going any further]!
+Your web server should also be able to [tt ping] the internal address of
+your border router.
+
+Now set the border router as the default gateway[fn Most IP network
+hosts have very limited routing abilities. All they can do is pass packets
+[e directly] to other hosts [e on the same network]. If they need to
+talk to hosts on another network, they have to pass the packet onto a (border)
+router who can route the packet on that hosts behalf. This host is called the
+[e default gateway], or sometime simply the [e gateway], as it acts as a
+door to the rest of the network. You may also see this host referred to as the
+[e host of last resort], since technically we turn to this host whenever
+our routing table cannot supply the next-hop or the direct path to the host.
+Routers can therefore also have a [e default gateway], as we will see in
+later labs.] for this new web server, using the [tt route] command:
+
+[command]
+  route add 0/0 192.168.x.1
+[end]
+
+using your patch number for [tt x]. The rather strange address
+[tt 0/0] is a short-hand for 'any', and will match all networks that don't
+appear in the routing table. Some versions of [tt route] (including
+OpenBSD's) allow you to use the name [tt default] instead of the catch all
+address. Thus we could type
+
+[command]
+  route add default 192.168.x.1
+[end]
+
+Now type[fn We will use the [tt -n] option of [tt show] to
+disable DNS lookups. Usually [tt route] will try to display the name of
+the router, instead of the raw IP address. Since we don't have DNS enabled
+yet, though, this won't work.]
+
+[command]
+  route -n show | head
+[end]
+
+to look at the first 20 lines output from the [tt route show]
+command[fn The [tt |] or [e pipe] is used in Unix to join two or
+more commands together. The [tt route] command usually produces a lot of
+text, so we pipe (or re-direct) this output to the [tt head] command which
+displays only the first few lines (20 by default). We could also use the
+[tt less] command to page though the output, e.g. by doing [tt route
+-n show | less]. See the man pages of [tt head] and [tt less] for more
+details.]. What is this output telling you?
+
+From other machine, try to connect to the new web server? Does this work? If
+not, why not (and why might it be working from the border router)?
+
+On the border router, enable IP packet forwarding by typing
+
+[command]
+  sysctl net.inet.ip.forwarding=1
+[end]
+
+Now go to another machine and try to connect to the new web server
+again. Does it work this time? What might have changed?
+
+[h2 Further Work]
+
+[note]
+The problems in this section are optional, however if you have the
+time they should help you understanding of the concepts introduced in
+this lab.
+[end]
+
+[h3 How do we extend the static routing tables?]
+
+Once you have your network up and running, you should find other peoples
+networks around as well. Can you connect to these networks? If not, why
+not? Can you configure your router to enable you to connect to any other
+available network? What steps do you need to take, and which machines
+need to be reconfigured?
+
+[h3 What path are the packets taking through the network?]
+
+In our simple network, the path taken by the packets should be
+deterministic: no router is more than one hop away from any other
+router. Usually, however, more than one router is involved. The
+challenge is knowing which ones; especially when you aren't getting the
+results you expect.
+
+This problem is common enough that many tools exist to help you find out
+what's going on. The oldest (and therefore the easiest to find) is the
+[tt tracert] ('trace route') command, details of which are available
+though the [tt man] page or on the module wiki.
+
+Investigate the use of the [tt tracert] command on the network. What
+does this command tell you about the network? What problems might this
+command help you to identify (or even solve)?
+
+[h3 Finding troublesome nodes]
+
+On the OpenBSD images, you also have the [tt mtr] command
+installed as well (again see the [tt man] page). Essentially, this command
+combines the [tt ping] and [tt tracert] commands. How does this
+tools compare to the plain [tt tracert] command? What at the
+advantages and disadvantages of using [tt mtr] instead of
+[tt tracert]?
+
+[h2 Questions]
+
+[ol]
+
+[item What is the purpose of using a rack system, plus patch panels
+for the routers?]
+
+[item What is the difference between a [e router] and a [e switch]?]
+
+[item Could we use a [e switch] to connect the remote network
+instead of the two border routers? Briefly justify your answer.]
+
+[item Why are the machines acting as routers connected to each
+other via a switch, rather than being directly connected together?]
+
+[item What is the purpose of enabling IP forwarding on the OpenBSD
+routers? Why might this capability be disabled by default?]
+
+[item Look at the network addresses and masks used in this exercise. Why might
+we have chosen '[tt 172.20.0.0/16]' for the [ac ISP] network and
+'[tt 192.168.x.0/24]' for the project and headquarters network? What
+difference does this make to the routers when making routing decisions?]
+
+[end]

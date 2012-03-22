@@ -8,10 +8,6 @@ debug/*
 # Ignore the generated configure header
 src/lib/config/config.h
 
-# CTest
-test/
-CTestTestfile.cmake
-
 # C
 *.a
 *.so

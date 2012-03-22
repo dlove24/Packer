@@ -1,0 +1,536 @@
+[h1 Connecting to the Internet]
+
+[h2 Aim]
+
+During this lab you will create a small network, linking a Windows client to
+the Internet via an intermediate router. You will start with a very simple
+set-up, and then gradually add and configure the intermediate router to
+produce the final configuration.
+
+For the purpose of this lab, you only need to set-up the [ac TCPIP] network
+stack: we will do most of our network testing using [tt ping] to start with.
+Once you have the [ac TCPIP] network working, try enabling other services and
+see what happens.
+
+[note]
+This lab may seem arcane and complex at first sight, but is
+actually very simple. The hard part is learning to work through the
+configuration of each client, router and patch panel in a methodical
+manner. Once you know how to do this, you should be able to replicate
+your efforts in a few minutes. It will probably take you longer than
+that on the first few tries, however...
+[end]
+
+[h2 Objectives]
+
+[ul]
+
+[item  You will be able to configure the basic [ac TCPIP] parameters
+on a Windows client]
+
+[item  You will be able to use [man:8 ifconfig] to set-up basic
+[ac TCPIP] parameters on a Unix system]
+
+[item  You will be able to identify how a router may be used to
+join physically unrelated networks.]
+
+[item  You will be able to calculate maximum and minimum hosts,
+sub-net number and network address given an arbitrary [ac IPv4]
+address and subnet mask.]
+
+[item  You will be able to configure [ac TCPIP] in a routed
+environment, and identify the differences between a Routed and a
+Switched network.]
+
+[item  You will be able to identify the need for an automatically
+configured network routers]
+
+[end]
+
+[h2 Pre-Requisites]
+
+[ul]
+		
+[item  You will need a copy of the Windows XP Service Pack 3
+client, held in on the lab computers.]
+
+[item  You will need a copy of the [tt pfSense Router]
+client, available from the module site. These notes assume you
+will be using image version [tt 01]. Ask the tutor for
+details if you are unsure.]
+
+[item  You should be familiar with running an operating system
+image under VMWare in the labs. If you haven't set-up a client
+image before, have a look on the module lab page for a tutorial
+on VMWare which will take you through the steps.]
+
+[item  You should be aware of how to set-up a basic Ethernet
+network. We will not be using anything fancy, but should should
+be comfortable with the patch panel and basic switch set-up.]
+
+[item  Finally it would be a good ideal to have some familiarity
+with the basics of [ac IPv4] addressing and sub-netting theory.]
+
+[end]
+
+[h2 Equipment]
+
+[ol]
+
+[item  1 $\times$ switch on the rack system]
+[item  2 $\times$ computers capable of running VMWare 6.5] 
+[item  4 $\times$ UTP Cat5 patch cables]
+
+[end]
+
+[h2 Recommended Reading]
+
+Most of the background documentation is available on
+the module site, under the notes for [e Lab 1].
+
+If you have not used a Unix system before, have a look
+at the [e Brief Guide to Unix] available on the module Wiki.
+You will also find links to the Unix manual ([tt man]) pages
+of the commands used in this lab.
+
+Finally, if you need a reminder of how [ac IPv4]
+addressing works, read the [e Short Note on IP Addressing]
+available on the module web-site.
+
+[h2 Connecting a Client Directly to the Internet]
+
+The first host we will set-up will be a single Windows XP client, connected
+directly to the Internet via an [ac ADSL] router. For many of you, this set-up
+will be familiar: once you know how the lab works, you can move onto the
+subsequent problems.
+
+You can find a copy of the Windows XP client on the lab machines system disk,
+in the folder [tt C:\VMWare\Virtual Machines\Windows XP Pro SP3]. Copy the
+entire folder to [tt D:\], and open the folder. Click on the file [tt Windows
+XP Pro SP3.vmx] inside the folder [tt D:\Windows XP Pro SP3]. VMWare should
+now start, opening the [tt Windows XP Pro SP3] image.
+
+[note]
+[e Before] you start the image, check the Ethernet card in VMWare is set to
+'Bridged' mode. If necessary, change the network type of the virtual interface
+card to 'Bridged' mode[fn We will be using real hardware in this lab, so you
+need to tell VMWare to direct everything to the underlying network hardware
+used by the host. We will later look at situations where we use a mix of
+virtual and real hardware.].
+[end]
+
+When you are ready, click the green [e Run] button . Alternatively, select [tt
+VM] $\rightarrow$ [tt Power] $\rightarrow$ [tt Power On] from the menu bar.
+The virtual machine should now begin to start loading.
+
+VMWare may ask you if you have 'moved or copied' the virtual machine. Select
+'copied' and VMWare will regenerate the MAC address[fn VMWare generates the
+[sc mac] addresses for the virtual machines when the image is first created.
+Selecting [e copied] forces VMWare to regenerate the [sc mac] addresses,
+allowing you to have multiple images attached to the same network. If you
+select [e move], VMWare would use the original [sc mac] address, and everyone
+would end up with the same one. At the very least this will cause confusion,
+but it would normally prevent the networking working at all.].
+
+While the virtual Windows image boots, cable your host to the [ac ADSL] line
+using a switch. Each group should use their own switch to start with, in order
+to reduce potential problems. Once your group has got everything up and
+running, you should be able to combine machines with other groups to grow the
+sub-net.
+
+For the moment, though, turn you attention the small patch panel on the bench in front of you and the larger patch panels at the back of the lab.
+
+Before you move to the patch panel at the back of the room, note the number
+underneath the [s red] faceplate (which should have a patch cable in it
+leading to the back of your computer). The number should be between [tt 01]
+and [tt 30]. Make a note of the number, and move to the back of the lab.
+
+At the back of the lab inside one of the middle cabinets, you should see a
+small black patch panel below a large green one (it will have 24 ports on it).
+Ports 1--5 of the [s black] patch panel will have an [ac ADSL] router
+behind them, on the [tt 192.168.7.0/24] subnet. Select a free port (other
+groups will be using other [ac ADSL] routers), and patch from the selected
+port to a [e free] switch. You can use the same switch as a another group if
+your really want, but you can avoid someone else's problems by reserving a
+switch for your group. [e Make a note] of your chosen port number on the
+[s black] patch panel --- you will need it later to work out the gateway
+address to use for your clients. Use [ref table:PortNum] to find the
+gateway address from the number of your [s black] patch-panel port.
+
+While you are at the back of the lab, patch from your chosen switch to the
+port on the [s red] patch panel where your lab computer connects to. Your
+port will have the same number as the red faceplate on your bench: [e i.e.]
+the number you made a note of earlier. For example, if your bench faceplate
+has the number [tt 12] below it, patch from port [tt 12] on the red patch
+panel to your chosen switch.
+
+[table:PortNum]
+Port Number | Gateway Address
+------------------------------
+[tt 1]      | [tt 192.168.7.1/24] 
+[tt 2]      | [tt 192.168.7.2/24] 
+[tt 3]      | [tt 192.168.7.3/24] 
+[tt 4]      | [tt 192.168.7.4/24] 
+[tt 5]      | [tt 192.168.7.5/24] 
+[tt 6]      | [tt 192.168.7.6/24] 
+[caption Mapping [ac ADSL] Patch-Panel Ports to Gateway Addresses]
+[end]
+
+[note] 
+The [ac ADSL] routers on Ports [tt 1], [tt 2] and [tt
+4] will [e require] a crossover cable to work correctly. The [ac ADSL] routers
+on Ports [tt 3], [tt 5] and [tt 6] can be patched using either a
+straight-through or a crossover cable[fn Not all our [ac ADSL] routers are
+identical, and those living on Ports [tt 1], [tt 2] and [tt 4] do not have [e
+auto-sensing] Ethernet ports. The ports on the other [ac ADSL] routers can
+detect where the [sc tx] and [sc rx] pairs are in the patch cable, and
+configure themselves accordingly.
+[end]
+
+[question]
+[item For routers without auto-sensing Ethernet ports, why do we have to use a cross-over patch cable to connect the router to the switch?.]
+[end]
+
+[medskip]
+
+When everything is patched, your virtual Windows machine should be connected
+to an ASDL router. All you need to do now is to configure your Windows
+machine, so that you can connect to the Internet via the [ac ADSL] router.
+
+[medskip]
+
+Inside the Windows client image, click [tt Control Panel] $\rightarrow$ [tt
+Network and Internet Connections] $\rightarrow$ [tt Network Connections] to
+open the list of adapters. You should see the VMWare bridged connection in
+here, and it should be listed as '[tt Connected]'
+
+Right-click on the icon for the VMWare adapter, and then click [tt Properties]
+from the pop-up menu. Windows should bring up the list of protocols and
+services for this adapter.
+
+Find the [tt Internet Protocol (TCP/IP)] service, and then click [tt
+Properties] to alter the [ac IPv4] parameters for the VMWare adapter. You will
+probably find the boxes in the dialogue box greyed out, as Windows will try to
+get everything from a [ac DHCP] server.
+
+Tell Windows you want to enter the [ac IPv4] address and sub-net mask
+manually, and enter an [ac IPv4] address in the form [tt 192.168.7.1x] where
+[tt x] is your computer number. For instance if you are connect to the bench
+patch panel [tt 15], your [ac IPv4] address will be [tt 192.168.7.115]. Your
+sub-net mask will be the same as that for your [ac ADSL] router. Finally you
+will need to put in the details for your [ac ADSL] router for your default
+gateway. You will also want to put the [ac IPv4] address of the [ac ADSL]
+router in the box marked [tt Preferred [ac DNS] server]. Leave the [tt
+Alternate [ac DNS] server] box blank.
+
+Close the sequence of dialogue boxes, and Windows should reconfigure the
+adapter.
+
+[medskip]
+
+Once the VMWare adapter has been configured, you will need to make sure
+everything is working. Open a command shell, by going to [tt Start Menu]
+$\rightarrow$ [tt Run]. Type [tt cmd], and press [tt Enter] and you should see
+a command prompt.
+
+Now run the a basic sequence of service tests as follows
+
+[command]
+  ping www.myertor.com
+[end]
+[command]
+  ping 81.187.233.190
+[end]
+[command]
+  tracert www.myertor.com
+[end]
+[command]
+  tracert 81.187.233.190
+[end]
+
+[h3 Questions]
+
+[ol]
+  [item  What is the output of the [tt ping] commands? Is this what you would expect? Why?
+  [item  What is the output of [tt tracert] commands? Is this what you would expect? Why?
+[end]
+
+[h2 Setting up the [ac WAN] Interface of the Sub-net Border Router]
+
+Now we have a known working connection to the Internet, we will reconfigure
+the Windows client to connect to an intermediate border router. The Windows
+client will connect to sub-net [tt 172.20.56.0/27], using an intermediate
+border router to regain the connection to the Internet.
+
+Our intermediate router will be running [tt pfSense], and you can download a
+copy of the [tt pfSense Router 01] image from the lab page on the module
+web-site.
+
+[medskip]
+
+To set-up the [tt pfSense Router] image, download a copy of the [tt pfSense
+Router 01] image from the module Wiki. By default Internet Explorer will try
+to save the image on your [tt F:] --- and will probably fail. Instead,
+right-click on the link shown in the module web-page, and click [tt Save As]
+to put the file on [tt D:\]. When the download finishes, open [tt D:\] and
+right-click on the file '[tt pfSense\_Router\_01.7z]' and select [tt 7-zip]
+$\rightarrow$ [tt Extract Here] to open the archive. When 7-zip finishes, you
+should see a folder called '[tt pfSense Router]' in [tt D:\]. Open the [tt
+pfSense Router] folder, and double-click on the file '[tt pfSense Router.vmx]'
+to open VMWare.
+
+Your [tt pfSense Router] will have two virtual Ethernet cards. The first card
+[e must] be set to 'Bridged' mode, and will be used to connect the border
+router to the [ac ADSL] router. In [tt pfSense], the virtual Ethernet
+interface will be called the [tt WAN] interface.
+
+Your second virtual Ethernet interface [e must] be set to 'Host-only' mode.
+Later we will connect the Windows client image to this interface. Under [tt
+pfSense] this interface will be known as the [tt LAN] image.
+
+Make sure the [tt pfSense Router] interfaces are set-up correctly, and start
+the image using the [e Run] icon from the toolbar (or on the image summary
+screen). Again, if asked whether the image has been 'Moved or copied', select
+'copied' and let the image continue to boot.
+
+[medskip]
+
+[figure:pfBoot]
+  [image pfSense_menu]
+  [caption The [tt pfSense] menu]
+[end]
+
+When the image has finished booting, you should see a text menu with a list of
+options as shown in [ref pfBoot]. Some [tt pfSense] options can be
+configured by this text-based interface: most of the options, though, are
+configured by a web-based interface.
+
+We will look at the web-based interface very shortly. Usually when configuring
+[tt pfSense] you set-up the router on the [ac LAN] first, and then use the
+web-based interface to configure the [ac WAN] interface. Hence option [tt 2)]
+on the text-menu to set the [ac LAN] [ac IPv4] address: [tt pfSense] assumes
+that once the [ac LAN] [ac IPv4] is set, everything else can be done through
+the web interface.
+
+However, in this lab we are effectively working 'backwards' --- moving from
+the Internet connection back towards the client. This allows us to check the
+connection at each stage, but means we have to do a bit more work to set-up
+[tt pfSense].
+
+[medskip]
+
+[figure:pfShell]
+  pfSense_shell]
+  [caption Calling Up the Shell in [tt pfSense]]
+[end]
+
+Our first task is therefore to set-up the [tt WAN] interface, making sure our
+sub-net router can talk to the [ac ADSL] router. We will do this using the [tt
+pfSense] command line, and the [man:8 ifconfig] command. Type [tt 8] and press
+[tt Return] to select the [tt 8) Shell] option. This will open a command line,
+as shown in [ref pfShell]
+
+[medskip]
+
+You can read about the [man:8 ifconfig] command from the links on the module
+Wiki. Use [man:8 ifconfig] command to [e temporarily][fn All Unix systems use
+the 'interface configuration' command [man:8 ifconfig] to perform [e
+temporary] configuration of the network interfaces. Some, e.g. Silicon
+Graphics Irix, use [man:8 ifconfig] to perform permanent alterations as well.
+Under [tt pfSense] (FreeBSD) you will have to edit the the [tt /etc/rc.d] file
+if you want your configurations to survive a reboot of the image. Have a look
+at the [e FreeBSD Handbook] for more details.] set the [ac IPv4] address of
+the [tt em0] interface. The basic syntax of the [man:8 ifconfig] is
+
+[command]
+  ifconfig <interface> inet <address> netmask <mask>
+[end]
+
+You might want to type
+
+[command]
+  ifconfig
+[end]
+
+and examine the output to get a feel for the command.
+
+[medskip]
+
+Our [tt WAN] interface is [tt em0][fn See the list of interfaces displayed in the login screen, or in [ref pfBoot]]. Thus the basic syntax will be
+
+[command]
+  ifconfig em0 inet <address> netmask <mask>
+[end]
+
+Set the interface address using pattern [tt 192.168.n.1x], where [tt x] is the
+number of your bench faceplate and [tt n] is the sub-net used by your [ac
+ADSL] router. For instance, if your computer is connected to faceplate [tt 12]
+on [tt Port 3], use the [ac IPv4] address [tt 192.168.7.112]. The sub-net mask
+obviously remains as before. Use
+
+[command]
+  ifconfig
+[end]
+
+and review the output to make sure everything is as you expect.
+
+[medskip]
+
+With the interface address set, try the basic service tests again
+
+[command]
+  ping www.myertor.com
+[end]
+
+[command]
+  ping 81.187.233.190
+[end]
+
+[command]
+  traceroute www.myertor.com
+[end]
+
+[command]
+  traceroute 81.187.233.190
+[end]
+
+[h3 Questions]
+
+[ol]
+  [item  What is the output of the [tt ping] commands? Is this what you would expect? Why?
+  [item  What is the output of [tt traceroute] commands? Is this what you would expect? Why?
+[end]
+
+[medskip]
+
+Now try setting the default gateway of the border router to the address of the
+[ac ADSL] modem. You will need to use the [man:8 route][fn See the lab notes
+on the module Wiki for more details of the [man:8 route] command.] command to
+tell [tt pfSense] where to send foreign packets to.
+
+Although [man:8 route] can do many things to the routing table, for our purposes the basic command we need is 
+
+[command]
+  route add default <gateway\_address>
+[end]
+
+where [tt <gateway\_address>] is the address of the [ac ADSL] router. Set the
+default gateway using the [man:8 route] command and try the basic service
+tests again
+
+[command]
+  ping www.myertor.com
+[end]
+
+[command]
+  ping 81.187.233.190
+[end]
+
+[command]
+  traceroute www.myertor.com
+[end]
+
+[command]
+  traceroute 81.187.233.190
+[end]
+
+[h3 Questions]
+
+[ol]
+  [item  What is the output of the [tt ping] commands this time? Is this what you would expect? Why?
+  [item  What is the output of [tt traceroute] commands this time? Is this what you would expect? Why?
+[end]
+
+[h2 Setting up the [ac LAN] Interface of the Sub-net Border Router]
+
+Once the [ac WAN] interface is set-up and known to be working, you will need
+to set-up the [ac LAN] interface. Once both interfaces have been set-up, we
+can connect the Windows client to the Internet via the newly configured border
+router.
+
+[medskip]
+
+As we mentioned before, setting up the [ac LAN] interface in [tt pfSense] is
+considerably easier. Setting the [ac LAN] interface by hand fits the 'natural'
+way of setting-up [tt pfSense] in most environments.
+
+If you are still on the [tt pfSense] command line from the previous task, type
+
+[command]
+  exit
+[end]
+
+to return to the [tt pfSense] menu. 
+
+[note]
+Do not reset the router to return to the [tt pfSense] menu]. If you reset the router your [ac WAN] configuration will be lost and you will have to re-configure the interface before you go any further][fn Remember we have only set-up the [ac WAN] interface temporarily. We need to use the Web interface (or edit a few configuration file) to make your changes permanent)].
+[end]
+
+When you can see the [tt pfSense] menu again, select option [tt 2)] to start
+the configuration of the [ac LAN] interface. This should start a small
+text-based wizard, allowing you to specify the interface address and sub-net
+mask. When asked whether you can a [ac DHCP] server, select [tt no] or '[tt
+n]'.
+
+You don't have to use the interface wizard: now you know how to use the [man:8
+ifconfig] command you can set-up the [tt em1] ([ac LAN]) interface as before.
+If you want to set-up the interface this way, you will need to open a
+command line shell as before.
+
+Whichever way you choose to set-up the [ac LAN] interface, you will need to
+use the same information. In both cases, set-up your [ac LAN] interface as the
+[e lowest] use-able address on the [tt 172.20.56.30/27] network.
+
+[questions]
+  [item  What is the lowest use-able address on the [tt 172.20.56.30/27] network?
+  [item  What is the sub-net mask of the [tt 172.20.56.30/27] network in dotted decimal form?
+  [item  What is the broadcast address address of the [tt 172.20.56.30/27] network in dotted decimal form?
+[end]
+
+[h2 Connecting the Windows Client]
+
+With both the [ac WAN] and [ac LAN] interfaces configured, you should now be
+able to connect the Windows client to the [tt 172.20.56.30/27] sub-net. [e You
+will need to change the virtual interface type from 'Bridged' to 'Host-Only'
+before the client will connect properly]. Give the Windows client the highest
+host (last use-able) address on the [tt 172.20.56.30/27] sub-net.
+
+[h3 Questions]
+
+[ol]
+  [item  What is the last use-able address on the [tt 172.20.56.30/27] network?
+  [item  Which [ac IPv4] address should you use as the default gateway on the [tt 172.20.56.30/27] sub-net, given the configuration already done for the previous task?
+[end]
+
+Set the default gateway on the Windows client. You can also tell Windows to
+use the same address for the [ac DNS] resolver[fn Our router runs a [ac DNS]
+forwarder, which should pick up the correct [ac DNS] resolver addresses from
+the [ac ADSL] router.]. Try the basic service tests again
+
+[command]
+  ping www.myertor.com
+[end]
+
+[command]
+  ping 81.187.233.190
+[end]
+
+[command]
+  traceroute www.myertor.com
+[end]
+
+[command]
+  traceroute 81.187.233.190
+[end]
+
+[h3 Questions]
+
+[ol]
+  [item  What is the output of the [tt ping] commands? Is this what you would expect? Why?]
+  [item  What is the output of [tt traceroute] commands? Is this what you would expect? Why?]
+[end]
+
+As a final check, you should now be able to use the [tt pfSense] web interface
+from the Windows client. Open Internet Explorer in Windows and type in the
+address of the sub-net border router. The login name is [tt admin], and the
+password is [tt gold].

@@ -1,0 +1,49 @@
+[h1 Introduction]
+
+[h2 Overview]
+
+Welcome to the [e Introduction to Networks] short course. In this course we
+will look at a number of core technologies and protocols in modern networks: focusing on the ones you are most likely to meet in a modern business. Our aim is to give you a broad understanding of how modern ([ac TCPIP]) networks work, how they are build, and how they are maintained.
+
+Modern networks are complicated systems, requiring the expertise of a broad range of specialists from a range of disciplines. We will not attempt to go too far into any particular speciality ---instead we will step back and look at how the whole systems works. Understanding how all the different layers, protocols and pieces of a network fits together is usually the hardest task: and the most useful background if you do decide to take a particular aspect further. 
+
+[h2 Learning Material]
+
+Most of the material you will need for this course  is available on (or at least linked from) the BlackBoard site. In addition to the BlackBoard site we will also use a number of other resources from the Learning Centre, which you can read about [link here|>Resources].
+
+One key resource will be the course textbook
+
+[bib FitzGerald:Business]
+
+several copies of which can be found in the Learning Centre. A number of different editions of this book exist, and all of the last few editions should be useful. We will be using the 9th Edition, however, as the reference edition: so all the page numbers, chapter reference, etc. that can be found on this site refer to that edition.
+
+[h2 Labs and Seminars]
+
+During the semester, we will cover six broad topics, with each topic centred around a single lab. Each lab [e will] take longer than the allocated amount of time, and so will be divided into two. The [e core tasks] focus on the most relevant technologies (and skills), and you should be able to complete them during the allocated lab time. The [e extended tasks] will have to be done in your own time, and introduce material, techniques and technologies that we will not have time for within the formal teaching hours. 
+
+Broadly the six topic areas we will cover are (chapter numbers refer to [cite FitzGerald:Business])
+
+[dl]
+[item Local Area Networks (Chapter 6 and 7):
+  [e Local Area Networks] are often the most critical resource for a business (and therefore usually the one we get called on most to manage). In modern networks many of the technologies that you find on a [e Local Area Network] also have variants on bigger networks (especially Ethernet) and in many cases run exactly the same protocols (e.g. [ac IP]). Local networks therefore make a very good starting point for our exploration of modern networking technologies.]
+
+[item The Internet: Connecting Local Networks (Chapters 8--10):
+  In the first block we will focus on Ethernet, as the 'characteristic' protocol of 'small' networks. We did, though, briefly look at the [ac IP] which characterises groups of networks (or internetworks). [ac IP] is a very important protocol for most modern networks, both large and small, and we will look at the main features of both [ac IPv4] and [ac IPv6] in this block. Some of the more complex details (especially dynamic routing), will be left for later.]
+
+[item Digression: The Domain Name System (Chapter 5, pp. 159--165):
+  Although both [ac IP] and Ethernet are very important from a network point-of-view, most network users (both human and application) rely heavily on a [e secondary] protocol for locating hosts on the network. That protocol is the [acl DNS], which often takes a bit of time to understand, as it sits [e alongside] the 'core' [ac TCPIP] protocols. So while the [ac DNS] is not, technically, part of the [ac TCPIP] protocols, very few networks work correctly until it is configured properly. Many of the security techniques and network management technologies also rely on the [ac DNS], so understanding how it works is a key skill. Unfortunately [cite FitzGerald:Business] only outlines the basics of the [ac DNS], so we will diverge from the textbook for a short section of the course.]
+
+[item Network Management: The Network Side (Chapter 13):
+  Network management glues your understanding of all the various pieces of the network puzzle together, hopefully allowing you to find, analyse and fix problems within the networks under your management. Network management is also a big topic in its own right, but both the topic and the tools are important enough for us to spend the next two blocks of work on. In the first block we will look at tools which help us understand the lowest layers of the network: focusing on protocol decoders, and especially WireShark. Even if you don't manage your own network, these tools are very useful in their own right (and indeed, you will also make use of them in other modules).]
+
+[item Network Management: Services (Chapter 5, Chapter 13):
+  The other side of network management steps back from the details of bytes, packets, and networks; looking instead at how all these pieces fit together to provide [e services] to users or other services on the network. This also gives us an opportunity to look at the higher levels of the network stack, and particularly the [e transport] layer (and protocols) that usually sit on-top of [ac IP]. We will not go very far into the complexities of [ac TCP], [ac UDP] and friends: again we will keep the focus on the [e why] rather than the [e how].]
+
+[item Putting it All Together:
+ Our last block looks at a single service, [ac SMTP], from the network to the service side. This should give you an opportunity to understand both [ac SMTP] in a bit more detail, but more importantly to act as an example of the things we have been covering in this short course.]
+
+[end]
+
+The six labs will be also be spread over two weeks, which should give you enough time to both complete the core tasks and to ask any questions. We will also be asking questions in the second week (usually based around the questions dotted throughout each lab), to make sure you understand what we are doing…
+
+The six blocks will also be complemented by a series of activities, which we will do during the 'lecture' hour. All of these activities will cover much the same ground as the textbook, but in a very condensed format. Reading ahead is therefore [e strongly] advised.

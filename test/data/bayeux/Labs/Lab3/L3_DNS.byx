@@ -1,0 +1,943 @@
+[h1 Lab 3: Understanding the Domain Name System]
+
+[h2 Aim]
+
+From this lab you should gain a comprehensive understanding of the [ac DNS], and how [ac DNS] servers are configured. We will be using a particular [ac DNS] server called [sc nsd] (Name Server Daemon), which you can read about in more detail on the module site.
+
+However, this lab is not about the configuration of a particular name server. Instead we focus on the basic principles of operation in the [ac DNS]: delegation of zones, how top-level and root severs work, and forward and reverse [ac IPv4] lookups.
+
+To help you understand the operation of the [ac DNS], the core lab problems are relatively simple --- if you just copy from the notes the lab will take about 10 minutes. However, if you do this you will probably gain very little understanding of what's going on. Instead you are encouraged to take your time, look though the supporting material, and understand what the core tasks are doing. Once you have understood what is going on, try to work through as many of the extended tasks as you can.
+
+[h2 Objectives]
+
+[ol]
+   [item  To understand the basic operation of the [ac DNS], in both forward and reverse lookups]
+   [item  To understand the distinction between [ac DNS] resolvers and [ac DNS] caches, and how these might be set-up and used in typical network scenarios.]
+   [item  To understand the difference between recursive and non-recursive resolvers, and the role of each in common network operations.]
+   [item  To gain some familiarity with the [sc bind]-style zone files commonly used to illustrate the operation of the [ac DNS].]
+[end]
+
+[h2 Pre-Requisites]
+
+[ol]
+   [item  You will need a copy of the [tt FreeBSD DNS 03] client image, which contains everything you will need for this lab. Ask the tutor for details if you are unsure.]
+   [item  You should be familiar with running an operating system image under VMWare in the labs.]
+[end]
+
+[h2 Equipment]
+
+[ol]
+
+    [item  1 $\times$ computers capable of running VMWare 6.5]
+
+[end]
+
+[h2 Scenario]
+
+Like all companies, Myertor relies on the correct operation of the
+[ac DNS] on the local and global Internet for mapping between IP
+addresses and host names. Also like most companies, Myertor provides
+services to the global Internet; for instance the company web-server
+known as [tt www]. Nearly all users also expect to access these services through a convenient hostname such as [tt www.myertor.com], made accessible through the [ac DNS].
+
+Myertor must therefore provide both its own servers to host the company
+[ac DNS] data, and must integrate those servers into the global [ac DNS].
+
+[h2 Lab Setup]
+
+Although we nearly always configure only a small portion of the [ac DNS], understanding how the [ac DNS] works requires familiarity with a significant portion of the system: from the root-servers, through the Top-Level Domains ([ac TLD])), and so-on to the server we have to configure. This presents several problems on real-systems, as most of these servers are beyond our administrative control.
+
+In this lab we have set-up a FreeBSD image, which runs several [ac DNS] servers simultaneously using a technique called [e jailing][fn See the module site for more detail of FreeBSD jails.]. Although every jail shares a single kernel, each jail has it's own IP address and hostname; and acts very much as an independent system.
+
+You task will be to configure the jails to mirror the actual [ac DNS] set-up of [tt www.myertor.com]. One of the jails will act as the [tt .com] [ac TLD] server, and you will have to configure another jail to reflect the [ac DNS] set-up used at Myertor. We have also provided a [tt root] ([tt .]) server, which has been configured to delegate to your [tt .com] [ac TLD].
+
+Once all the jails have been set-up, you should be able to [man:8 ping] [tt www.myertor.com]: and to connect to the web-server running on that IP.
+
+[h2 Core Tasks]
+
+[h3 Setting up the FreeBSD Image]
+
+You will only need one image for this lab: [tt FreeBSD DNS 03]. FreeBSD is arguably one of the most advanced open source operating systems, tracing its heritage to the Berkley Unix Distribution used in the development of the original [ac TCPIP] protocols and services. We have already seen a close relative of FreeBSD (OpenBSD) before, as it forms the foundation to Lab 1. For this lab we have chosen to use FreeBSD because it offers a simple way of running multiple host environments on the same kernel. This allows us to configure, and test, a network with multiple virtual hosts in a single VMWare image.
+
+To set-up the [tt FreeBSD DNS] image, download a copy of the [tt FreeBSD DNS 03] image from the module site. By default Internet Explorer will try to save the image on your [tt F:] --- and will probably fail. Instead, right-click on the link shown in the module web-page, and click [tt Save As] to put the file on [tt D:\]. When the download finishes, open [tt D:\] and right-click on the file '[tt FreeBSD_DNS_03.7z]' and select [tt 7-zip] $\rightarrow$ [tt Extract Here] to open the archive. When 7-zip finishes, you should see a folder called '[tt FreeBSD DNS]' in 
+[tt D:\]. Open the [tt FreeBSD DNS] folder, and double-click on the file '[tt FreeBSD DNS.vmx]' to open VMWare.
+
+Your image will have two network cards: one configured for the [e Host Only] network, and one set to bridged mode. We won't be using the bridged interface in this lab, and the [e Host Only] interface should be fully configured.
+
+[note] 
+When VMWare asks you whether you have 'moved or copied' the [tt FreeBSD
+DNS 03] image, you should select '[e copied]'. If you later connect images
+using the bridged interface, the [sc mac] address should then be unique. For
+the purpose of this lab, however, it doesn't matter whether you select 'moved'
+or 'copied'. 
+[end]
+
+[medskip]
+
+Start the FreeBSD image, and wait for the [tt login:] prompt to appear. Login to the FreeBSD image using the user name [tt root] and the password [tt gold]. Once you have a prompt for the '[tt root]' user, you should be ready to go: everything else has been set-up for you. 
+
+[h3 Preparing the Environment]
+
+Your FreeBSD image will be running three jails, each with its own hostname and [ac IP] address. Together with the jail host (the environment you have just logged into), this gives you four environments to play with.
+
+You can see the basic configuration of the jails by using the command
+
+[command]
+  ezjail-admin list
+[end]
+
+at the command prompt in the jail host. This command should give you the following output[fn Ignoring the [ac IPv6] addresses for a moment.]
+
+[medskip]
+
+[output]
+STA JID   IP              Hostname                     Root Directory
+--- ----- --------------- ---------------------------- -------------------------
+DR  1     10.10.10.1      thalia                       /usr/jails/thalia
+DR  2     10.10.0.1       euphrosyne                   /usr/jails/euphrosyne
+DR  3     10.0.0.1        aglaea                       /usr/jails/aglaea
+[end]
+
+[medskip]
+
+The first column ([tt STA]) indicates the [e status] of the jail, in this case the type of jail and that it's running. The next column ([tt JID]) gives the [e jail [sc id]], which you will use to tell FreeBSD which jail you want. The jail [sc id] number is [s important]. We will soon be using this number to login to the jails: getting the number wrong will log you into the [e wrong] jail.
+
+After the jail [sc id], we then have the [ac IP] address and the hostname of the jail. We won't be using the hostname much, but you will have to know the [ac IP] address of the jail to configure the [ac DNS] properly. 
+
+Finally the [tt ezjail-admin](1) command tells you which directory on the jail host is holding the jail. You could change to this directory and edit the configuration of the jail directly. However, you will usually find it much easier to treat each jail as an independent host and log into the jail to configure it.
+
+[medskip]
+
+Once we know the [ac IP] addresses of all the jails, we can start to configure them. You jail host already has a root server running, on the [ac IP] address [tt 127.0.0.1]. We have also placed an entry in the [tt /etc/hosts] file to map [tt 127.0.0.1] to the hostname [tt root]. We will come back to the configuration of [tt root] shortly, but for the moment we will leave it as it is.
+
+Like nearly all [e authoritative] name servers, [tt root] only answers [e non-recursive] [ac DNS] queries. If [tt root] can't provide the answer, it will tell you where to go next --- but it won't do the next look-up for you[fn We will come to the role of recursive [ac DNS] resolvers later in the lab.]. For instance, if we use the standard [man:1 dig] tool to ask the server [tt root] the address of [tt www.myertor.com][fn Note the use of the [tt @] argument to tell [man:1 dig] which server we want to query. If we omitted this parameter, [man:1 dig] would use the default name sever --- which won't work because we haven't configured things yet.]
+
+[command]
+  dig @root www.myertor.com
+[end]
+
+we get
+
+[output]
+; <<>> DiG 9.6.0-P1 <<>> @root www.myertor.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57173
+;; flags: qr rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;www.myertor.com.               IN      A
+
+;; AUTHORITY SECTION:
+com.                    86400   IN      NS      a.ns.com.
+
+;; ADDITIONAL SECTION:
+a.ns.com.               86400   IN      A       10.0.0.1
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(127.0.0.1)
+;; WHEN: Tue Apr 10 17:19:55 2011
+;; MSG SIZE  rcvd: 68
+[end]
+
+When [man:1 dig] has finished querying the [tt root] server, it lays out the response in the [sc bind] standard syntax. We won't go into the details of the syntax just yet, but you should see three sections: a [e question] section, an [e authority] section, and an [e additional] section. Each section has the response given as a record in a [sc bind] zone.
+
+The question section is essentially exactly what we asked the server: for the address or [tt A] record of [tt www.myertor.com.], or in [sc bind] syntax
+
+[output]
+;www.myertor.com.               IN      A
+[end]
+
+Note two details of the response, though. Firstly, [man:1 dig] has added a dot, [tt .], to the end of '[tt www.myertor.com]'. This dot turns the hostname into a [e fully qualified hostname]; in other words, the hostname now specifies a complete path from the host ([tt www]) to the root server ([tt .]). [sc bind] [s only] allows fully qualified hostnames in zone files --- which will become significant when we write our own. Secondly, [man:1 dig] has added a semi-colon, '[tt :]' in front of the question. In [sc bind] syntax, a semi-colon means a [e comment]; and will be ignored by the parser of the zone files.
+
+After the question section comes the [e authority] section. In this section the name server replies with [e either] the details of the host(s) is has authority over, or a link to namesevers for sub-domains over which it has authority. In our reponse, [tt root] isn't giving us a hostname ([tt A] record), but is telling us that it has authority over the [tt com.] domain. Since [tt com] is the next part of our question[fn Remember that while domain names are [e read] left-to-right, hosts [e parse] right-to-left. So '[tt com]' is the next domain after '[tt .]': hence '[tt com.]'.], it makes sense that we should be able to ask this server as the next link in the chain. This gives us a [e name server], [tt NS], record telling us the relevant name server for the [tt com] domain is [tt a.ns.com.].
+
+However, while we now know the [e name] of the next [ac DNS] server ([tt a.ns.com.]) we [e don't] know the [ac IP] address of this server. Nor can we easily look it up --- as the server which should know the [ac IP] address of [tt a.ns.com.] is in fact [tt a.ns.com.] itself. And while [tt .] has authority over [tt com], [tt .] has also delegated responsiblity for all hosts in [tt com.]: including the responsbility for the name server.
+
+This circular resolution of name server hostnames is very common in the [ac DNS]. To break the circle we need to use a [e glue record], which adds 'extra' information to the parent zone telling resolvers the [ac IP] address of the relevant name server. 
+
+The glue record for the [tt com.] domain is returned in the final [e additional] section of the output from [man:1 dig]. This section states
+
+[output]
+;; ADDITIONAL SECTION:
+a.ns.com.               86400   IN      A       10.0.0.1
+[end]
+
+giving us the [tt A] (address) record for [tt a.ns.com.], and the [ac IP] address we need: [tt 10.0.0.1]. With this record, we can now ask [tt a.ns.com.] for the next link: which nameserver is authoritative for the [tt myertor] domain in the [tt com] domain.
+
+[medskip]
+
+Once you know what you're looking out, the output from [man:1 dig]
+should be relatively straightforward. Other tools will give you much the
+same information, but usually in a different format. For instance, our jail host uses MaraDNS for the recursive caching [ac DNS] resolver[fn Which we will talk about later, once we have everything running.]. MaraDNS provides the tool [tt askmara](1), which has a slightly odd query syntax and needs the [ac IP] address of the [ac DNS] server we're asking. Our previous query of who has the address for [tt www.myertor.com] looks like
+
+[command]
+  askmara Awww.myertor.com. 127.0.0.1
+[end]
+
+Much like [man:1 dig], [tt askmara](1) gives us the reply in three sections: a question, a response, and additional information
+
+[output]
+# Querying the server with the IP 127.0.0.1
+# Question: Awww.myertor.com.
+# NS replies:
+#com. +86400 ns a.ns.com.
+# AR replies:
+#a.ns.com. +86400 a 10.0.0.1
+[end]
+
+Although the syntax is a little different, you should be able to pick out the same information we had before.
+
+[medskip]
+
+When following the chain of [ac DNS] lookups, we could do the work ourselves. Now we know the address of the next server is [tt 10.0.0.1], we can simply ask that server the same question
+
+[command]
+  dig @10.0.0.1 www.myertor.com
+[end]
+
+At the moment, though, the server replies with
+
+[output]
+; <<>> DiG 9.6.0-P1 <<>> @10.0.0.1 www.myertor.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 57265
+;; flags: qr rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;www.myertor.com.               IN      A
+
+;; Query time: 0 msec
+;; SERVER: 10.0.0.1#53(10.0.0.1)
+;; WHEN: Tue Apr 10 19:02:46 2011
+;; MSG SIZE  rcvd: 33
+[end]
+
+indicating the server doesn't know the answer to the question (since the [tt status] field in the response header is set to [tt SERVFAIL]). At this point we have a problem: this server should be able to tell us where to go next. Since it can't, we have a broken [ac DNS]. Fixing this problem is the next objective.
+
+[medskip]
+
+Before we start fixing things, though, we will quickly introduce a tool that helps cut out much of the leg-work involved in following a [ac DNS] query through various servers. We could simply use [man:1 dig] as we have before[fn And being able to sort out [ac DNS] problems using [man:1 dig] is a valuable skill. Nearly every modern Unix-like system has the [man:1 dig] tool installed, so if you can use it to find and fix [ac DNS] problems, you stand a good chance of applying your skills on most platforms.]. Running multiple [man:1 dig] queries, though, quickly become a little tedious. In addition the output from [man:1 dig] is a little verbose.
+
+In this lab we will therefore use a tool called [tt dnstracer](1), which automates the [ac DNS] lookups and gives an easy to understand display of the output. If you give [tt dnstracer](1) a server, it will use that server as the [tt .] server: and keep following responses until it finds the [ac IP] address of the host you want (or the [ac DNS] chain breaks). For example, we want to know the [ac IP] adddress of [tt www.myertor.com] starting at the [tt .] server [tt root]. This means using the '[tt -s]' parameter and telling[tt dnstracer](1) the name (or [ac IP] address) of the [tt .] server you want to start from. We also need to tell [tt dnstracer](1) the hostname we want, so the final [tt dnstracer](1) command is
+
+[command]
+  dnstracer -4 -s root www.myertor.com
+[end]
+
+From this command we get
+
+[output]
+Tracing to www.myertor.com[a] via root, maximum of 3 retries
+root (127.0.0.1)
+  ___ a.ns.com [com] (10.0.0.1)
+[end]
+
+We can see from this output the [ac IP] address of the [tt root] server ([tt 127.0.0.1]), and the next server in the chain ([tt 10.0.0.1]). In addition, we know this next server is called [tt a.ns.com] and that it has authority over the [tt com] domain. Finally the line linking the two shows that [tt root] is delegating authority to [tt a.ns.com].
+
+Again, though, we can't get any further. Currently [tt a.ns.com] is broken, and isn't returning the correct information for us to find the next server. The next task, then, is to fix [tt a.ns.com]
+
+[h3 Questions]
+
+[ol]
+  [item  What is the difference between a fully and a partially qualified host name?
+  [item  What does a name server claim if it has [e authority] in the [ac DNS]?
+  [item  Why does [man:1 dig] give the address of the name server in the [tt ADDITIONAL] section?
+  
+[end]
+
+[h3 Understanding the Bind Zone Syntax]
+
+All the authoritative [ac DNS] servers in this lab use the [sc nsd] (Name Server Daemon) application. [sc nsd] is a modern, non-recursive and authoritative-only domain name server; developed to add diversity to the pool of root servers making up the Internet [ac DNS][fn You can read more about [sc nsd] (and [sc bind]) on the module site.]. For many years the Internet root servers used only the [sc bind] application package, which has a long and horrible security history. Part of the rational for [sc nsd] is making sure a fatal [sc bind] problem doesn't wipe out the core Internet [ac DNS] servers, but [sc nsd] also serves a test-bed for new [ac DNS] standards. Currently [sc nsd] is used exclusively for the [tt k] root server cluster, but also finds a secondary role in other root clusters. 
+
+Both [sc nsd] and [sc bind] share the same syntax for the zone records holding
+information about [ac DNS] domains. Setting up the two applications is very
+different, but you will gain experience in the configuration of the most
+popular ([sc bind]) and second most popular ([sc nsd]) [ac DNS] servers on the
+Internet[fn We will meet the third most popular [ac DNS] server, Microsoft's
+[ac DNS] service used by Active Directory, in a later lab.]. As you have seen
+from tools like [man:1 dig], the [sc bind] zone syntax is commonly used as [e
+the] representation of [ac DNS] domains (especially in the various [ac DNS]
+RFC's). Even if you never configure a [sc bind]-like server again, having at
+least some idea of the zone syntax is therefore useful.
+
+[medskip]
+
+With [sc nsd] in all the jails should be up and running, and partly configured
+for you. What we haven't done is set-up the zone records that tell [sc nsd]
+how the [ac DNS] domain is configured. We won't go over the set-up of [sc
+nsd][fn Again, links can be found on the module site.], and instead move
+straight into the configuration of the zones.
+
+All the zone files you need to configure should live in [tt /etc/nsd/primary]:
+a directory holding the primary[fn Some [ac DNS] servers act as
+non-authoritative sources of zones, usually to provide a back-up to the
+authoritative servers. Authoritative servers are called [e primary] severs,
+hence these non-authoritative servers are usually called [e secondary]
+servers. Configuration and management of secondary [ac DNS] servers is a large
+topic in itself, and is beyond the scope of this lab.] zone records for the
+domains the [sc nsd] server is authoritative for. Everything you need to alter
+in the first part of the lab will live in this directory on one of the hosts.
+
+Before we start writing a new zone file, you should also have a look at the
+file holding the root zone, [tt /etc/nsd/primary/root.zone], in the jail host.
+This file is the zone file on our [tt root] server: the same one we have just
+queried using the normal [ac DNS] protocols.
+
+Open the zone files using the command
+
+[command]
+  less /etc/nsd/primary/root.zone
+[end]
+
+and you should see something like
+
+[code bind]
+;;;
+;;; Configuration file for the Fake Internet Root Server
+;;;
+
+;; Set the default Time To Live for records served from
+;; this server
+$TTL 1d
+
+;; Set the authority of this server over the [ac DNS] root
+.  IN  SOA  fake.root.net.  hostmaster.root.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+
+;; List of core nameservers authoritative over this zone
+   IN  NS  fake.root.net.
+
+;; Address records for the core nameservers
+fake.root.net.  IN  A  127.0.0.1
+
+;;;
+;;; Records for Delegated Zones
+;;;
+
+;; Name Server Authority Records
+com.        IN  NS  a.ns.com.
+org.        IN  NS  a.ns.org.
+
+;; Address Records for Delegated Name Servers
+a.ns.com.   IN  A   10.0.0.1
+a.ns.org.   IN  A   10.0.0.1
+[end]
+
+Use the up and down arrow keys to move around the file, and press '[tt q]' to quit and return to command line.
+
+[medskip]
+
+If we look at the end of this zone file, you should see the same information we obtained using the [man:1 dig] command[fn As we said before, comments are indicated by lines beginning with [tt ;]. Strictly these are optional, but most real zone files are heavily commented to indicate the relevant sections and different types of hosts and services being configured.]
+
+
+[code bind|24]
+;;;
+;;; Records for Delegated Zones
+;;;
+
+;; Name Server Authority Records
+com.        IN  NS  a.ns.com.
+org.        IN  NS  a.ns.org.
+
+;; Address Records for Delegated Name Servers
+a.ns.com.   IN  A   10.0.0.1
+a.ns.org.   IN  A   10.0.0.1
+[end]
+
+The name server authority records are listed (in the same format), stating for instance the [tt a.ns.com] server is authoritative for the [tt com] domain. Note this root server also has the authority to delegate the [tt org] domain as well, which it does to the server [tt a.ns.org]. We will have a look at this zone later in the lab.
+
+Right at the end of the file we have our glue records, telling other [ac DNS] resolvers the [ac IP] addresses of the delegated name servers. At the moment, both the configured name servers are delegated to the same nameserver, running on the host [tt 10.0.0.1].
+
+[medskip]
+
+In the middle of the zone file, we have a similar set of records for the zone itself
+
+[code bind|18]
+;; List of core nameservers authoritative over this zone
+   IN  NS  fake.root.net.
+
+;; Address records for the core nameservers
+fake.root.net.  IN  A  127.0.0.1
+[end]
+
+This set of records states the name server for the [tt .] domain is called [tt
+fake.root.net], and that [tt fake.root.net] server can be found on the address
+[tt 127.0.0.1]. Note the space, though, in the [tt NS] record. This space
+[s must] be present, because we are inheriting the zone name from the
+authority section (discussed next). Hence this line is equivalent to
+
+[code bind|18]
+;; List of core nameservers authoritative over this zone
+.   IN  NS  fake.root.net.
+[end]
+
+which is similar to the delegated zones we have seen before.
+
+[medskip]
+
+Before we get to the delegated and zone records, however, we need to state our authority over the zone: and hence our authority to delegate to other servers. At the start of the zone file, we find the most critical record in the entire zone. This record is called the [e Start of Authority] (or [tt SOA]) record, and for our zone looks like
+ 
+[code bind|9]
+;; Set the authority of this server over the [ac DNS] root
+.  IN  SOA  fake.root.net.  hostmaster.root.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+[end]
+
+Reading from left to right in Line [tt 10], the [tt SOA] records states we have authority over the [tt .] (root) domain. This means we have the authority to define any host (or service) in this domain, or to delegate any portion of this domain to create another [e sub-domain]. The [tt IN SOA] states this record is a Start of Authority record, and the next argument states this authority rests in the server [tt fake.root.net]. Exactly who '[tt fake.root.net]' is will be defined later, but this nameserver is the designated master for the domain. 
+
+We then get the e-mail address of a human contact for this domain, with the '[tt @]' in the e-mail address replaced by '[tt .]'. On Internet facing domain this address [s must] point to the mailbox of a real person --- people will get very annoyed if you break something and they can't find you.
+
+After the [tt SOA] record, we get a series of numbers in brackets. The most important number in this series is the first one, which defines the [e serial number] of the zone file. Most nameservers are set-up in master/slave arrangements, and the slaves know to up-date their zone file by checking the serial number of that zone file with the one on the master. Whenever we edit a zone file, we therefore need to update the serial number to tell the slaves to refresh their copy[fn Our lab doesn't have slave nameservers, but getting into the habit of updating the serial number after any edit will make you life easier in the long run. Making an edit and then forgetting to update the serial number will usually mean your domain becomes inconsistent as different hosts may be using different versions of the 'same' zone file.].
+
+Following the serial number are three numbers used by secondary nameservers. The first number specifies the number of seconds that should elapse before a secondary servers queries the master to check for changes to the zone file (indicated by a change in the serial number of the [tt SOA] record). When a secondary detects a change, it will try to transfer the zone data from the master; if this fails the next number states the number of seconds a secondary should wait before retrying. Finally if a secondary keeps failing to transfer the data, it should answer using old data up to the expire limit (one week ([tt 1w]) in our case).
+
+We won't say much more about these numbers in this lab[fn Look in the documentation linked in the site for more information.]. However, the final number in the [tt SOA] record is important. The last number in the [tt SOA] record gives the minimum time other nameservers should cache the zone information supplied by this server. In a very stable domain, these values might say caches can hold zone data for days ([tt d]) or even weeks ([tt w]). Our [tt SOA] says that nameservers should expire cached data after 1 hour ([tt 1h]), which is typical for a reasonably volatile domain.
+
+[medskip]
+
+Hopefully by this point you have a basic understanding of the [ac DNS] system, and of the syntax use in [sc bind]-style zone files to configure nameservers. We can now put this understanding to good use, and fix the [tt a.ns.com] server holding the zone data for the [tt com] domain.
+
+[h3 Questions]
+
+[ol]
+  [item  Why do we give both [tt NS] and [tt A] records for our name server in the zone file?]
+  [item  What is the purpose of the glue records in the zone specifying the delegation?]
+  [item  What do the last three entries in the [tt SOA] record do, and how are they used by [ac DNS] clients?]
+[end]
+
+[h3 Fixing a.ns.com]
+
+We know from our previous experiments that [tt a.ns.com] has the [ac IP] address [tt 10.0.0.1]. If we look at the output from the [tt ezjail-admin](1) command at the start of the lab, we can see the host for [tt 10.0.0.1] lives in jail [tt 3]
+
+[output]
+STA JID   IP              Hostname                     Root Directory
+--- ----- --------------- ---------------------------- -------------------------
+DR  1     10.10.10.1      thalia                       /usr/jails/thalia
+DR  2     10.10.0.1       euphrosyne                   /usr/jails/euphrosyne
+DR  3     10.0.0.1        aglaea                       /usr/jails/aglaea
+[end]
+
+We will start fixing [tt a.ns.com] by logging into jail [tt 3] using the command[fn The [tt jexec](8) command executes a command in the specified jail. In our case, we are asking for the Z Shell, [tt zsh](1), to be executed; giving us a root prompt in the jail.]
+
+[command]
+  jexec 3 zsh
+[end]
+
+When this command finishes, we should have a new prompt indicating we have become the '[tt root]' user inside the jail
+
+[output]
+[root@aglaea / (128)]
+[end]
+
+[note]
+Pay attention to the command prompt: it will tell you both which user you are
+[e and] which host you are currently logged into. Remember that [tt nyx] is
+the jail host --- anything else is a jail. It is easy to get lost and
+configure the wrong host, but the command prompt should give you a hint where
+you are.
+[end]
+
+[medskip]
+
+If we look at the contents of the [tt /etc/nsd/primary] directory on [tt aglaea]
+
+[command]
+  ls /etc/nsd/primary
+[end]
+
+we should see a number of zone files
+
+[output]
+10.in-addr.arpa.zone com.zone com.zone.example org.zone
+[end]
+
+The first zone file, [tt 10.in-addr.arpa.zone], is used for reverse [ac DNS] lookups: those mapping [ac IP] addresses to names. We will look at this file in the additional problems later on. Our focus will instead be on the [tt com.zone] file, which we will use to configure the [tt com.] domain. You might, though, want to look at [tt com.zone.example] which shows you what the [tt com.zone] file should look like at the end of this lab[fn Use the command [tt nano /etc/nsd/primary/com.zone.example] to have a look at this file.].
+
+Open the [tt com.zone] file using nano
+
+[command]
+  nano /etc/nsd/primary/com.zone
+[end]
+
+Start creating the zone file by defining the [tt SOA] record. This needs to state our authority over the [tt com] domain, and this authority should be invested in the [tt a.ns.com] nameserver. The other details are less critical: but they must be present in a valid the zone file. We will more or less copy the defaults used before, giving
+
+[code bind]
+;; Set the authority of this server over the com domain
+com. IN  SOA  a.ns.com.  hostmaster.com.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+[end]
+
+Next we need to define the [tt a.ns.com] host as an authoritative nameserver for this domain. Remember we also need to define the glue record for this nameserver, so that other nameservers can find it. Add the lines
+ 
+[code bind]
+;; List of core nameservers authoritative over this zone
+   IN  NS  a.ns.com.
+
+;; Address records for the core nameservers
+a.ns.com.  IN  A  10.0.0.1
+[end]
+
+In the last section, we need to use our new authority to delegate to the next nameserver in the chain. This nameserver will be authoritative over the [tt myertor] sub-domain of [tt com], and will live in jail [tt 2]. We will call the authoratative nameserver for [tt myertor.com], [tt a.ns.myertor.com] and use the jail [tt 2] [ac IP] address [tt 10.10.0.1]. Our last section therefore looks like
+
+[code bind]
+;;;
+;;; Records for Delegated Zones
+;;;
+
+;; Name Server Authority Records
+myertor.com.        IN  NS  a.ns.myertor.com.
+
+;; Address Records for Delegated Name Servers
+a.ns.myertor.com.    IN  A   10.10.0.1
+[end]
+
+[medskip]
+
+Putting everything together, the final [tt com.zone] file should therefore look something like
+ 
+[code bind]
+;; Set the authority of this server over the com domain
+com. IN  SOA  a.ns.com.  hostmaster.com.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+
+;; List of core nameservers authoritative over this zone
+   IN  NS  a.ns.com.
+
+;; Address records for the core nameservers
+a.ns.com.  IN  A  10.0.0.1
+
+;;;
+;;; Records for Delegated Zones
+;;;
+
+;; Name Server Authority Records
+myertor.com.        IN  NS  a.ns.myertor.com.
+
+;; Address Records for Delegated Name Servers
+a.ns.myertor.com.    IN  A   10.10.0.1
+[end]
+
+[medskip]
+
+Save the file using [tt Ctrl+O], and exit [tt nano](1) using [tt Ctrl]+[tt X].
+
+With the zone file in place, we need to tell our [sc nsd] nameserver to read the zone file and publish the data.
+
+Unlike [sc bind], [sc nsd] does not publish the zone file directly. Instead [sc nsd] uses a complied binary database, which makes things both faster and more secure (since the zone file you've just edited is never directly exposed to the Internet). Using an intermediate database also gives [sc nsd] a chance to check your zone file for errors, and report any necessary corrections before publishing the data.
+
+Once the zone file has been created, we use the [sc nsd] control utility, [tt nsdc](1), to both create the binary database and publish the data.
+
+The first step is for [sc nsd] to check the zone file and create the database. Type
+
+[command]
+  nsdc rebuild
+[end]
+
+and [tt nsdc](1) should reply with something like
+
+[output]
+zonec: reading zone "10.in-addr.arpa".
+zonec: processed 1 RRs in "10.in-addr.arpa".
+zonec: reading zone "com".
+zonec: processed 5 RRs in "com".
+zonec: reading zone "org".
+zonec: processed 0 RRs in "org".
+
+zonec: done with 0 errors.
+[end]
+
+If [tt nsdc](1) reports [s any] errors you [s must] go back an correct the zone file. Usually [tt nsdc](1) will tell you where the error is, and what the problem is. Unless you zone file is free from errors, [tt nsdc](1) will refuse to rebuild the binary database. And until the binary database is rebuilt, your zone data will [s not be published][fn Not publishing invalid zones is a deliberate safety feature. On live nameservers, this means [sc nsd] can always publish valid (if incorrect) data. If it doesn't like you new zone file, [sc nsd] will just keep using the old data until you fix the problem. Unlike [sc bind], you can't silently break things by using an invalid zone file.].
+
+Assuming your zone file is error free, you can tell [sc nsd] to publish the new zone data using the command
+
+[command]
+  nsdc reload
+[end]
+
+and you new zone data should be ready for use.
+
+[medskip]
+
+We will test the new zone file from the jail host, so type 
+
+[command]
+  exit
+[end]
+
+to break from the jail and return to the host[fn Note the change in command prompt!].
+
+If we now ask the nameserver [tt 10.0.0.1] for the [ac IP] address of [tt www.myertor.com]
+
+[command]
+  dig @10.0.0.1 www.myertor.com
+[end]
+
+we should get
+
+[output]
+; <<>> DiG 9.6.0-P1 <<>> @10.0.0.1 www.myertor.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28625
+;; flags: qr rd; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;www.myertor.com.               IN      A
+
+;; AUTHORITY SECTION:
+myertor.com.            3600    IN      NS      a.ns.myertor.com.
+
+;; ADDITIONAL SECTION:
+a.ns.myertor.com.       3600    IN      A       10.10.0.1
+
+;; Query time: 0 msec
+;; SERVER: 10.0.0.1#53(10.0.0.1)
+;; WHEN: Mon Apr 11 00:14:16 2011
+;; MSG SIZE  rcvd: 68
+[end]
+
+
+This time we have an authority section, indicating the nameserver at [tt 10.0.0.1] now knows it is authoritative for the [tt com] domain. We also have the glue record and the name of the next server in the chain: [tt a.ns.myertor.com].
+
+[medskip]
+
+Using [tt dnstracer](1) we can present this growing chain more clearly, as
+
+[command]
+  dnstracer -4 -s root www.myertor.com
+[end]
+
+now shows
+
+
+[output]
+Tracing to www.myertor.com[a] via root, maximum of 3 retries
+root (127.0.0.1)
+  ___ a.ns.com [com] (10.0.0.1)
+        ___ a.ns.myertor.com [myertor.com] (10.10.0.1)
+[end]
+
+
+Of course this still doesn't give us the actual address of [tt www.myertor.com]. That requires configuring the [tt a.ns.myertor.com] nameserver, which we will now do.
+
+[h3 Questions]
+
+[ol]
+  [item  In a real zone, we would usually have to supply at least two nameservers, e.g.\ [tt a.ns.myertor.com] and [tt b.ns.myertor.com]. Why do we have to duplicate the data stored at nodes in the [tt dns]?]
+  [item  Describe in outline the standard process for syncronising the data held at multiple name servers. What additional configuration does this require of the name servers? How does a slave name server tell if the zone data on the master has been updated?]
+  [item  What happens if the data between the slave and masters is not synronised correctly? Can client detect this condition? How do clients try to avoid problems caused in this case?]  
+[end]
+
+[h3 Configuring tt a.ns.myertor.com]
+
+Much of this step is simply a repetition of the last one. We need to login to the jail with the [ac IP] address [tt 10.10.0.1], setup an authoritative zone record for [tt myertor.com], and publish this information using [sc nsd].
+
+[medskip]
+
+The jail with the [ac IP] address [tt 10.10.0.1] is jail [tt 2], so type
+
+[command]
+  jexec 2 zsh
+[end]
+
+to login.
+
+[medskip]
+
+Once inside the jail, create the file [tt /etc/nsd/primary/myertor.com.zone] using the command
+
+[command]
+  nano /etc/nsd/primary/myertor.com.zone
+[end]
+
+The first section of the zone file should now be familiar: create the [tt SOA] record stating the domain authority, and then set the details of the authoritative nameservers
+
+[code bind]
+;; Set the authority of this server over the [ac DNS] root
+myertor.com. IN  SOA  a.ns.myertor.com.  hostmaster.myertor.com.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+
+;; List of core nameservers authoritative over this zone
+   IN  NS  a.ns.myertor.com.
+
+;; Address records for the core nameservers
+a.ns.myertor.com.  IN  A  10.10.0.1
+[end]
+
+However, this time we won't delegate authority to anyone else. Instead we will define the host [tt www], using the authority we already have: meaning the host will end up in the [tt myertor.com] domain. 
+
+We could define the [tt www] host the long way, in much the same we
+we have already defined the glue records for the nameservers. Like the nameservers glue records, hosts also use [tt A] records; so we could define our host with the line
+
+[code bind]
+; Host Records
+www.myertor.com.   IN  A  10.10.10.10
+[end]
+
+Typing the fully-qualified domain out every time, though, quickly become tedious. So we will use a [e macro] which [sc nsd] (or [sc bind]) will automatically add to each hostname to produce the fully-qualified host name. This macro is called [tt \$ORIGIN], and means our host section looks like
+
+[code bind]
+;; Set the domain suffix for hosts in this domain
+$ORIGIN myertor.com.
+
+; Host Records
+www                IN  A  10.10.10.10
+[end]
+
+For a single host this approach is probably overkill, but once you have more than a handful of hosts it quickly becomes much easier. Using macros also means zone files also look neater, which helps to prevent errors.
+
+Our full zone file now looks like
+
+[code bind]
+;; Set the authority of this server over the [ac DNS] root
+myertor.com. IN  SOA  a.ns.myertor.com.  hostmaster.myertor.com.  (
+    1    ; serial
+    3h   ; refresh
+    1h   ; retry
+    1w   ; expire
+    1h   ; negative caching TTL
+)
+
+;; List of core nameservers authoritative over this zone
+   IN  NS  a.ns.myertor.com.
+
+;; Address records for the core nameservers
+a.ns.myertor.com.  IN  A  10.10.0.1
+
+;; Set the domain suffix for hosts in this domain
+$ORIGIN myertor.com.
+
+; Host Records
+www                IN  A  10.10.10.10
+[end]
+
+[medskip]
+
+Build the zone file database using the command 
+
+[command]
+  nsdc rebuild
+[end]
+
+Again, if you have errors you [s must] correct them before continuing. Assuming everything is OK, type
+
+[command]
+  nsdc reload
+[end]
+
+and you new zone data should be published and ready for use.
+
+[medskip]
+
+Exit the jail and return to the jail host, by typing
+
+[command]
+  exit
+[end]
+
+[medskip]
+
+Once back in the jail host, confirm everything is working using [man:1 dig]
+
+[command]
+  dig @10.10.0.1 www.myertor.com
+[end]
+
+producing
+
+[output]
+; <<>> DiG 9.6.0-P1 <<>> @10.10.0.1 www.myertor.com
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43980
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;www.myertor.com.               IN      A
+
+;; ANSWER SECTION:
+www.myertor.com.        3600    IN      A       10.10.10.10
+
+;; AUTHORITY SECTION:
+myertor.com.            3600    IN      NS      a.ns.myertor.com.
+
+;; ADDITIONAL SECTION:
+a.ns.myertor.com.       3600    IN      A       10.10.0.1
+
+;; Query time: 0 msec
+;; SERVER: 10.10.0.1#53(10.10.0.1)
+;; WHEN: Mon Apr 11 00:58:31 2011
+;; MSG SIZE  rcvd: 84
+[end]
+
+
+Again we get the authority and additional sections, telling you who the authoritative nameserver is for the domain and the [ac IP] address of that server (or servers). This should be the same as the information given by our parent.
+
+However, we have a new section: [tt ANSWER]. This section does exactly what it says --- it provides the direct answer to the question we asked. Once we see this section, we know we have reached the end of the chain. We asked what the [ac IP] address of [tt www.myertor.com] is, and we have received the answer [tt 10.10.10.10].
+
+Using [tt dnstracer](1) we should now be able to see this complete chain
+
+[command]
+  dnstracer -4 -s root www.myertor.com
+[end]
+
+showing
+
+[output]
+Tracing to www.myertor.com[a] via root, maximum of 3 retries
+root (127.0.0.1)
+  ___ a.ns.com [com] (10.0.0.1)
+        ___ a.ns.myertor.com [myertor.com] (10.10.0.1) Got authoritative answer
+[end]
+
+[h3 Questions]
+
+[ol]
+  [item  How do clients tell when they have reached the end of the query process, i.e. that [tt www.myertor.com] is a leaf node in the [ac DNS] tree?]
+  [item  When updating the [ac DNS] data, [sc nsd] requires an explicit [tt reload] of the data. Why do we have to tell [sc nsd] to reload the data, and what data does [sc nsd] serve before issuing the [tt reload]?]
+  [item  Describe the outline of the process used to add sub-zones to [tt myertor.com], e.g. [tt admin.myertor.com].]
+[end]
+
+[h2 Making Clients Work]
+
+At this point we have a fully working [ac DNS]. Our root server and [ac TLD] are both delegating correctly, and the nameserver for [tt myertor.com] is able to accept this delegation and hand out records for hosts within that domain.
+
+However, we are assuming that clients are able to handle the various lookup steps for themselves (remember each server only hand out the next step in the chain). Nearly all clients will be able to do this, but in doing so many clients will be asking the same questions. In our very simple [ac DNS], all clients will be asking the same root server for the [ac TLD] nameservers. Some domains are likely to be very popular, so again, many clients are likely to be asking the same questions about sub-domains in the [ac TLD]s.
+
+In the [tt SOA] records, we told resolvers looking up the domain
+records how long they could hold onto the data for. In most cases this
+data is valid for at least hours, and usually days (or even weeks).
+Caching this data could therefore reduce both the load on our network, and speed up the response to the clients by storing commonly used data. If we asked the caches to do the recursive lookups on behalf of the clients, this would also speed things up (and reduce the need for clients to do the work themselves).
+
+Recursive [ac DNS] caches are very common on most networks, and are essential for the correct operation of most clients. Instead of pointing the clients to the global root servers and expecting them to do the hard work, we point clients at the nearest recursive cache and delegate most of the work to the cache. 
+
+In our simple [ac DNS] environment, the host jail is configured to use MaraDNS[fn More information on MaraDNS is available on the module site.] as the recursive cache via the file [tt /etc/resolv.conf]. This file tells the operating system which nameserver to use for lookups, and the domain name for 'short' hostnames: how [tt www] should be interpreted, for instance.
+
+MaraDNS is, in turn, configured to work with the root servers specified in the file [tt /etc/mararc]. In our case we have just one root server, so that's all MaraDNS can see.
+
+Pulling everything together now means we can do
+
+[command]
+  lynx www.myertor.com
+[end]
+
+The text web browser [tt lynx](1) should find the recursive caching nameserver, which find the root of the [ac DNS]. From the root we follow the chain of delegations, until we reach the [ac IP] address of the host [tt www] in the domain [tt myertor.com]. With the [ac IP] address, we can then open a [sc tcp] connection to the web server, and display the home page.
+
+[h3 Questions]
+
+[ol]
+  [item  What is the difference between an authoritative name server and a recursive name server cache?]
+  [item  Do name servers have to be authoritative?]
+  [item  Can clients tell if a response is authoritative or not?]
+[end]
+
+[h2 Extended Tasks]
+
+[h3 Adding a Record for tt www.myertor.org]
+
+In the delegation records of the root server in our [ac DNS], we also had space for the [tt .org] [ac TLD]. Configure jails [tt 2] and [tt 3] so the command 
+
+[command]
+  lynx www.myertor.org
+[end]
+
+executed in the jail root will also display the target web page. You should be able to do this by modifying the existing zone records, in much the same way as you did for the [tt .com] domain.
+
+[h3 Questions]
+
+[ol]
+  [item  Do we have to make any special configuration changes to the name server to allow the serving of multiple zones?]
+  [item  Assuming the name server is configured, describe the process of adding new zones to the name server.]
+  [item  How is delegation affected by the additional zones? What do you have to do to correct any issues in the delegation authority?]
+[end]
+
+[h2 Reversing the Flow]
+
+Once you understand the normal domain name lookup process, you should be able to add records for the reverse direction: mapping [ac IP] addresses to hostnames. Reverse lookups are very common in most networks, for instance displaying the hostnames in a packet trace, or verifying the hostname of an [tt ssh](1) client.
+
+The major difference between forward and reverse lookups is that reverse lookups are [e always] done in the special domain [tt in-addr.arpa][fn At least for version 4 [ac IP] addresses. Version 6 addresses use a different domain]. Delegations work the same way, but the [ac IP] addresses are given in reverse: i.e. we assume the left-most byte has the highest significance and the right-most the least. Hence the [ac IP] address [tt 10.10.0.1] lives in the domain [tt 1.0.10.10.in-addr.arpa].
+
+Start by defining the [tt SOA] records and authority for the [tt 10.in-addr.arpa] zone in the jail host, and then work through the delegation in jails [tt 3] and [tt 2].
+
+[h3 Questions]
+
+[ol]
+  [item  Compare the forward and reverse lookups for the web server. Where is the lookup process similar, and at what points does it differ?]
+  [item  How would we handle a host with multiple [ac IPv4] addresses listed in the forward zone?]
+  [item  How would we handle a host with multiple [e names] in the forward zone?]
+[end]
+
+[h3 Adding Mail]
+
+You can download a ready-to-run mail server with a web interface using the [tt FreeBSD Console 03] image, available at [tt ftp://download.myertor.com/Images/FreeBSD_Console_03.7z] (and linked through the module site). Extract the image and set VMWare running as before.
+
+The [tt FreeBSD Console] image uses [sc dhcp] to assign an [sc ip] address, so you will have to first change the image to use the static address [tt 10.10.10.20]. This is essentially the same process as we went through in the last lab, but changes have to be stored in the file [tt /etc/rc.conf]. Read through the [e FreeBSD Handbook] for details of statically configuring networking in FreeBSD.
+
+Once you have a mail server running, change the [tt myertor.com.] zone to direct [sc smtp] traffic to the new mail server. Once the zone is re-started you should be able to send e-mails via the new server. A good tool for testing your mail setup is [tt swaks](1): search the module site for more details.
+
+[h3 Questions]
+
+[ol]
+  [item  Describe the sequence of [ac DNS] lookups used during delivery of a mail message (a diagram may help).]
+  [item  If the primary mail server were unavailable, how would this sequence be modified so that a host could still deliver to a secondary mail server with priority [tt 20].]
+[end]
+
+[h3 IPv6]
+
+If log into the [tt FreeBSD DNS] image and run the command
+
+[command]
+  ezjail-admin list
+[end]
+
+You should see that every jail also has an [ac IPv6] address, in addition to the [ac IPv4] address. The [ac DNS] in [ac IPv6] is essentially the same as the one for [ac IPv4]: apart from the use of [tt AAAA] records in place of [tt A] records. The reverse domain is also slightly different as you will soon discover.
+
+You don't need to understand [ac IPv6] routing to complete this problem: you just need to understand how an [ac IPv6] works, and how this fits into the [ac DNS].
+
+The first problem is getting [ac DNS] working; just as we have done before for [ac IPv4] addresses. The easiest way to start is just to modify the zone files. You will then have to force [ac IPv6] clients to use [ac IPv4] to look-up [ac IPv6] names: this should happen automatically.
+
+A better solution is to use a 'full' [ac IPv6] network, where [sc nsd] responds to both [ac IPv4] and [ac IPv6] queries on both [ac IPv4] and [ac IPv6] addresses. Although the jails are all fully set-up for [ac IPv6], you will need to tell [sc nsd] to bind to the relevant [ac IPv6] address. This will require modifying the relevant [tt /etc/nsd/nsd.conf] file in the jail, and restarting [sc nsd]. You should then be able to get [sc nsd] to respond to [ac IPv6] queries using [ac IPv6].
+
+[h3 Questions]
+
+[ol]
+  [item  Look at the [ac IPv6] addresses used for the jails. How do these correspond to the [ac IPv4] addresses used earlier? What is this addressing scheme called?]
+  [item  How does the reverse name-lookup work in [ac IPv6]? What are the key differences between this process and the one used for [ac IPv4]?]
+  [item  Describe the sequence of [ac DNS] requests made during mail delivery for an [ac IPv6] mail host on a fully [ac IPv6] enabled network (including an [ac IPv6] cache and name server) delivering mail to an [ac IPv4] only network (including only an [ac IPv4] name server).]
+[end]
+

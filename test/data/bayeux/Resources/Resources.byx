@@ -1,0 +1,91 @@
+[h1 Resources]
+
+[h2 Network Guides]
+
+This module focus on mixed networks, running both special purpose operating
+systems such as Cisco's IOS to the more general Unix and Windows server and
+client systems. Behind the lectures and labs, we will be using a single
+network to explore the themes and technologies used in this module. This
+network is based on a semi-fictional company called Myertor.
+
+[h2 Operating System Guides]
+
+Although we will be using both Windows and Unix operating systems in the labs,
+we won't go into many details of the installation or administration of either.
+
+[h2 Recommended Texts]
+
+[h3 Course Site]
+
+For this course, we will not be using a 'core text'. Instead, each lab and
+lecture will have a link to relevant information either in this module site,
+or elsewhere. However, this will be the [e basic] information. Networking is a
+vast topic, and we will deliberately move through quite big topics at a fair
+pace.
+
+You might, therefore, want to supplement your reading with other texts that
+deal with the same material in different ways, or in greater depth. We have
+therefore selected three books (actually two books and a series) to help guide
+your reading around the topics introduced here. Where appropriate, you will
+find links to these three books from topics in the module site. You do not
+have to read anything from these books: but your understanding of the topic
+and the module will be greatly enhanced if you do. You may also find some of
+the lab exercises easier as well, as some of these books provide alternative
+methods and tools for some of the experiments we will do in the networking
+labs.
+
+[h3 Textbooks]
+
+If you want to supplement your understanding of material presented in this
+course, we strongly recommend The TCP/IP Guide by Charles Kozierok. We will be
+using the electronic version, available
+[link from the author|http://www.tcpipguide.com/order+the+guide.htm]. All the
+page numbers to [e The TCP/IP Guide] in the module site will refer version 3
+of this text.
+
+You can also obtain a paper copy of The TCP/IP Guide, the relevant details are
+
+[quote]
+Charles Kozierok, [e The TCP/IP Guide], No Starch Press, US (May 2005), ISBN 159327047X
+[end]
+
+You can order a copy from Blackwells, or this books is also available [link
+from
+Amazon|http://www.amazon.co.uk/exec/obidos/tg/detail/-/159327047X/qid=1126278702/sr=8-1/ref=pd_bbs_1?v=glance&s=books&n=507846].
+
+[medskip]
+
+Many of you will have met Andrew Tanenbaum's Computer networks from earlier modules, so we will include references to this text where appropriate. The full reference to this text is
+
+[quote]
+Andrew Tanenbaum, [e Computer networks], Prentice Hall; 3rd edition (March 6, 1996), ISBN 0133499456
+[end]
+
+Library Record: [link http://catalogue.shu.ac.uk/record=b1370370a]
+
+If you really want a copy, this can also be ordered from Blackwells if you want, or Amazon. Tanenbaum is also very widely available second hand, so you should be able to pick up a copy relatively cheaply if you want to.
+
+We will also be making use of Richard Stevens TCP/IP Illustrated: full reference
+
+[quote]
+W. Richard Stevens, [e TCP/IP Illustrated, Volume 1: The Protocols],  Addison Wesley, 1994. ISBN: 0-201-63346-9
+
+W. Richard Stevens, [e TCP/IP Illustrated, Volume 2: The Implementation],  Addison Wesley, 1995. ISBN 0-201-63354-X.
+[end]
+
+Stevens is especially useful for those involved in writing programs operating over TCP/IP networks, but is also good for those who want an in-depth look at the bottom layers of modern operating systems. Unless you're feeling rich, we don't recommend you buy these books. Instead consult the on-line version available from the library
+
+Library Record: [http://catalogue.shu.ac.uk/record=b1502121a]
+
+For many of the low-level details of networking technology, you need to read
+[e Data and Computer Communications] by William Stallings. This book has a
+large number of editions: we will be using the 8th edition available in the
+library. You can readily find earlier editions of this book second-hand: for
+most of the topics we are interested in, the earlier editions will be fine.
+The full reference to this book is
+
+[quote]
+William Stallings, [e Data and computer communications], Prentice Hall; 8th edition (2007), ISBN 0132433109
+[end]
+
+Library Record: [http://catalogue.shu.ac.uk/record=b1459158a]
