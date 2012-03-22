@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Goto the build directory
+mkdir debug
+cd debug
+
+# Clean-up any previous CMake invocation
+rm -rf CMakeCache.txt 
+
+# Re-run CMake
+cmake CMakeLists.txt

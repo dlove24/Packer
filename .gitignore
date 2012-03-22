@@ -1,0 +1,59 @@
+##
+## Build Directories/Files
+##
+
+# Ignore the main build directory
+debug/*
+
+# Ignore the generated configure header
+src/lib/config/config.h
+
+# CTest
+test/
+CTestTestfile.cmake
+
+# C
+*.a
+*.so
+
+##
+## Directories generated/curated by Ruby Gems
+##
+
+# rcov generated
+coverage
+
+# rdoc generated
+rdoc
+
+# yard generated
+doc
+.yardoc
+
+# bundler
+.bundle
+
+# jeweler generated
+pkg
+
+##
+## Old code file after re-style
+##
+*.orig
+
+##
+## Editor Files
+##
+
+# TextMate
+*.tmproj
+tmtags
+
+# vim
+*.swp
+
+##
+## Operating System Files
+##
+
+*.DS_Store
