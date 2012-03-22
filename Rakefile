@@ -65,7 +65,7 @@ end
 ## Use astyle to ensure consistency in the C code 
 desc "Ensure the C libraries are written in a consistent style"
 task :style do
-  sh "astyle  --style=banner --indent=spaces=2 --indent-preprocessor --indent-col1-comments --break-blocks=all --pad-oper --pad-paren-out --unpad-paren --add-brackets --convert-tabs --align-pointer=type  --recursive lib/*.c lib/*.cpp lib/*.h bin/*.c"
+  sh "astyle  --style=banner --indent=spaces=2 --indent-preprocessor --indent-col1-comments --break-blocks=all --pad-oper --pad-paren-out --unpad-paren --add-brackets --convert-tabs --align-pointer=type  --recursive src/*.c src/*.cpp src/*.h src/*.c"
 # --align-reference=name
 end
 
